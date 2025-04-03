@@ -27,17 +27,27 @@
         </form>
         {% endif %}
 
-        {% for i in todos %}
-        <h1>{{i.title1}}</h1>
-            <button class="del">
-                <a href="{% url 'delete_g' i.pk %}">delete</a>
-            </button>
-            <button class="edit">
-                <a href="{% url 'edit_g' i.pk %}">edit</a>
-            </button>
-        </p>
-        {% endfor %}
+
+
+        
     </div>
+    <table>
+        <thead>
+            <tr>
+               <th> Title</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in todos %}
+            <tr>
+                <td>{{i.title1}}</td>
+                <td><button class=""><a href=""  style="color: black;">delete</a></button></td>    
+                <td><button class="" style="color: black;"><a href=""  style="color: black;">edit</a></button></td>
+            </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
 </body>
 </html>
 

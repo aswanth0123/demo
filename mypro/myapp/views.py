@@ -23,3 +23,6 @@ def edit_g(request, pk):
         return redirect('add_todo')
     todo_obj = TodoItem.objects.get(pk=pk)
     return render(request, 'index.html', {'editor': todo_obj})
+
+def sample(request):
+    return render(request, 'sample.html')
