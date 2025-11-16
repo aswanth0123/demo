@@ -1,0 +1,4279 @@
+{% extends 'authentication/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+  /* Card */
+  .form-card {
+    padding: 18px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #eef3f7;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.05);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+
+  .form-label { font-weight:600; color:#2b2f36; margin-bottom:6px; display:block; }
+  .input-icon { width:40px; display:inline-flex; align-items:center; justify-content:center; color:#6c757d; background:transparent; border-right:0; }
+  .help-muted { color:#6c757d; font-size:0.85rem; }
+
+  /* Photo area - fixed size wrapper */
+  .photo-card {
+    border-radius:10px;
+    padding:12px;
+    text-align:center;
+    background: linear-gradient(180deg,#fbfdff,#ffffff);
+    border:1px dashed #e6eef6;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    /* prevent the photo card from stretching its parent column */
+    flex: 0 0 auto;
+    height: 226px;
+    width: 200px;
+  }
+
+  /* fixed wrapper to hold either image OR placeholder without changing layout */
+  .img-wrap {
+  width: 100%;
+  max-width: 160px;   /* reduce this to make the container narrower */
+  height: 140px;      /* reduce this to make it shorter */
+  border-radius: 8px; /* keep small rounded corners (not circular) */
+  overflow: hidden;   /* prevents image from overflowing & changing layout */
+  background: #fafbfd;
+  border: 1px solid #eef3f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+
+  /* image fills the wrapper but won't distort (covers and crops) */
+  .img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* placeholder sits in same wrapper and occupies same area */
+  .image-placeholder {
+    padding: 12px;
+    color:#98a0aa;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:8px;
+    width:100%;
+    height:100%;
+    box-sizing: border-box;
+  }
+
+  /* small screens: slightly smaller wrapper */
+  @media (max-width:991px) {
+    .img-wrap {
+      max-width: 180px;
+      height: 180px;
+    }
+  }
+
+  /* compact rows to reduce vertical spacing */
+  .mb-2 { margin-bottom: .5rem !important; }
+  .mb-3 { margin-bottom: 1rem !important; }
+
+  /* email row checkbox */
+  .inline-check { display:flex; align-items:center; gap:10px; margin-left:10px; }
+
+  /* tabs */
+  .nav-tabs .nav-link { color:#2b2f36; font-weight:600; }
+  .nav-tabs .nav-link.active { background:#f8fbff; border-color:#e6eef6; color:#0b5ed7; }
+
+  /* ensure select2 container fills column */
+  .select2-container--bootstrap4 .select2-selection--single { height: calc(2.25rem + 2px); padding-top: 2px; }
+</style>
+<style>
+
+.select2-container--default .select2-results > .select2-results__options {
+  max-height: 200px; /* limits dropdown height */
+  overflow-y: auto;  /* scroll if too tall */
+  z-index: 9999;     /* make sure it’s on top */
+}
+
+
+
+  /* make sure select wrapper doesn't constrain width */
+  .select-wrapper { width: 100%; display: block; }
+
+  /* ensure the original select keeps full width (helps Select2 measurement) */
+  select.form-control { width: 100%; }
+
+  /* force Select2 container to be full width of its parent */
+  .select2-container { width: 100% !important; box-sizing: border-box; }
+
+  /* Some theme-specific tweaks for default Select2 single height/appearance */
+  .select2-container--default .select2-selection--single {
+    padding: 6px 10px;
+   
+    min-height: 38px;
+    box-sizing: border-box;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 28px;
+    padding-right: 24px;
+  }
+
+  /* avoid applying native .form-control styles to generated Select2 DOM */
+  select.form-control:not(.select2-hidden-accessible),
+  input.form-control,
+  textarea.form-control {
+    /* preserve your rules for real controls */
+  }
+</style>
+<style>
+  /* --- Make Select2 fields a little taller (single & multiple) --- */
+
+/* Single-select (default theme) */
+.select2-container--default .select2-selection--single {
+  height: 36px;                /* total control height */
+  padding: 4px 2px;          /* inner spacing */
+        /* match your form-control rounded corners */
+  box-sizing: border-box;
+}
+
+/* Rendered text should be vertically centered */
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  line-height: 28px;          /* adjust so text is centered within height */
+  margin-top: 0;
+  padding-right: 24px;        /* keep room for arrow */
+}
+
+/* Arrow area must match height to vertically center the caret */
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 46px;
+  top: 0;
+  right: 10px;
+}
+
+/* Multiple-select: give a minimum height and nicer padding for tags */
+.select2-container--default .select2-selection--multiple {
+  min-height: 42px;
+  padding: 6px 8px;
+ 
+  box-sizing: border-box;
+}
+
+/* Inline search input inside multiple select (typeable area) */
+.select2-container--default .select2-selection--multiple .select2-search--inline .select2-search__field {
+  height: 28px;        /* input height inside the multiple select */
+  margin-top: 6px;
+  box-sizing: border-box;
+}
+
+/* Tweak tag alignment inside multiple select */
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+  line-height: 20px;
+  height: auto;
+  padding: 4px 8px;
+  margin-top: 4px;
+}
+
+/* Prevent your broad .form-control rule from accidentally styling the Select2 generated DOM.
+   This makes sure only native selects (not Select2's hidden original) get the form-control styles. */
+input.form-control,
+textarea.form-control,
+select.form-control:not(.select2-hidden-accessible) {
+  /* keep your existing rules here (or none) */
+}
+
+/* Optional: smaller screens (adjust if needed) */
+@media (max-width: 480px) {
+  .select2-container--default .select2-selection--single,
+  .select2-container--default .select2-selection--multiple {
+    height: 44px;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 30px;
+  }
+}
+
+</style>
+<style>
+  :root {
+    --teal: #0ea5a3;
+    --muted: #6b7280;
+    --surface: #fff;
+    --danger: #ef4444;
+  }
+  body {
+    font-family: Inter, "Open Sans", Arial, sans-serif;
+    background: #f6fbfb;
+    margin: 0;
+  }
+  #page-wrapper {
+    min-height: 100vh;
+  }
+
+  /* Card */
+  .card-centered {
+    max-width: 100%;
+    margin: 20px auto;
+    background: var(--surface);
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(2, 6, 23, 0.06);
+    overflow: hidden;
+  }
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 18px;
+  }
+  @media (min-width: 920px) {
+    .card-body {
+      flex-direction: row;
+    }
+  }
+
+  /* left form and right avatar */
+  .form-col {
+    flex: 1;
+    padding-right: 10px;
+  }
+  /* Reduced avatar column width to keep sidebar visible */
+  .avatar-col {
+    flex: 0 0 240px;
+    padding-left: 14px;
+    border-left: 2px solid rgba(2, 6, 23, 0.04);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  @media (min-width: 720px) {
+    .form-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .form-group label {
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .form-control {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #e6eef0;
+      background: #fbfdfe;
+    }
+    .form-control:focus {
+      outline: none;
+      box-shadow: 0 8px 24px rgba(14, 165, 163, 0.08);
+      border-color: var(--teal);
+    }
+
+  .col-span-3 {
+    grid-column: 1 / -1;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 0;
+    margin-bottom: 14px;
+  }
+  .tab-btn {
+    background: #f8fafb;
+    border: 1px solid #e6eef0;
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .tab-btn.active {
+    background: linear-gradient(
+      180deg,
+      rgba(14, 165, 163, 0.1),
+      rgba(14, 165, 163, 0.04)
+    );
+    color: var(--teal);
+    box-shadow: 0 4px 10px rgba(14, 165, 163, 0.06);
+  }
+  /* Tab — make error state a clear solid red with white text */
+  .tab-btn.error {
+    color: var(--danger) !important; /* only change text color to red */
+    border-color: transparent !important;
+    box-shadow: none !important;
+    filter: none !important;
+    /* border: 1px solid var(--danger) !important; */
+    background: linear-gradient(
+      180deg,
+      rgba(165, 14, 14, 0.1),
+      rgba(165, 14, 14, 0.04)
+    );
+  }
+
+  /* Slightly darker hover for red tab for affordance */
+  .tab-btn.error:hover {
+    background: linear-gradient(
+      180deg,
+      rgba(253, 172, 172, 0.1),
+      rgba(250, 173, 173, 0.04)
+    );
+    filter: brightness(0.95);
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 14px;
+  }
+ 
+  .btn-muted {
+    background: #fff;
+    border: 1px solid #e6eef0;
+    padding: 10px 14px;
+    border-radius: 10px;
+  }
+
+  /* avatar: preview ~120-140px */
+  .avatar-wrap {
+    width: 140px;
+    height: 140px;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 6px solid #f3f3f3;
+    box-shadow: 0 14px 40px rgba(2, 6, 23, 0.08);
+    display: grid;
+    place-items: center;
+    background: linear-gradient(180deg, #f8fafb, #fff);
+  }
+  .avatar-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .avatar-text {
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+  }
+  .avatar-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .btn-upload {
+    margin-top: 7px;
+    background: var(--teal);
+    color: #fff;
+    padding: 7px 9px;
+    border-radius: 8px;
+    border: 0;
+  }
+  .btn-clear {
+    background: #ebe9e9;
+    border: 1px solid rgba(2, 6, 23, 0.06);
+    padding: 7px 9px;
+    border-radius: 8px;
+  }
+
+  .field-error {
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: 6px;
+    display: none;
+  }
+  .is-invalid {
+    border-color: var(--danger) !important;
+    box-shadow: none !important;
+    outline: none !important;
+    background-image: none !important;
+    background-repeat: no-repeat !important;
+    background-position: right center !important;
+  }
+  .hidden {
+    display: none !important;
+  }
+
+  .password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 36px;
+    background: transparent;
+    border: 0;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .relative {
+    position: relative;
+  }
+
+  @media (max-width: 720px) {
+    .avatar-col {
+      border-left: none;
+      border-top: 1px solid rgba(2, 6, 23, 0.04);
+      padding-top: 12px;
+    }
+  }
+  .section-title {
+    font-size: 14px;
+    font-weight: 800;
+    margin: 6px 0 12px;
+    color: #0f172a;
+  }
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  /* ===== Custom select styling: full area, consistent arrow ===== */
+.select2-container--default .select2-selection--multiple .select2-search--inline .select2-search__field {
+    height: 19px;
+    margin-top: 6px;
+    box-sizing: border-box;
+}
+</style>
+
+<style>
+  /* ensure server/client-side error nodes are visible */
+  .field-error, small.validate-error {
+    display: block !important;
+    color: #c82333;
+    margin-top: .25rem;
+    font-size: 0.6rem;
+  }
+
+  
+</style>
+
+
+<style>
+  /* ---------- Responsive form-grid (drop into your CSS or <style>) ---------- */
+
+/* Mobile-first: force grid to be single column on small screens and override inline grid */
+.form-grid {
+  display: grid !important;
+  gap: 1rem;
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Default: single column on mobile unless inline style specifies otherwise or top-section-grid */
+.form-grid:not([style*="grid-template-columns"]):not(.top-section-grid) {
+  grid-template-columns: repeat(1, 1fr) !important; /* 1 column on phones */
+}
+
+/* Small / landscape phones -> 2 columns (>=576px) - only if no inline style and not top-section-grid */
+@media (min-width: 576px) {
+  .form-grid:not([style*="grid-template-columns"]):not(.top-section-grid) {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Large tablets / small desktops -> 3 columns (>=992px) - only if no inline style and not top-section-grid */
+@media (min-width: 992px) {
+  .form-grid:not([style*="grid-template-columns"]):not(.top-section-grid) {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+/* Keep explicit full-width row items (only for .full-row class, not inline styles) */
+.form-grid .full-row,
+.form-grid .span-all {
+  grid-column: 1 / -1 !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Specific grid for top section - always 12 columns */
+.top-section-grid {
+  grid-template-columns: repeat(12, 1fr) !important;
+}
+
+/* Ensure grid-column spans work properly in top-section-grid */
+.top-section-grid .form-group[style*="grid-column: span"] {
+  /* Respect inline grid-column span values */
+  min-width: 0;
+  width: auto;
+}
+
+/* Override any width: 100% rules for form-groups in top-section-grid */
+.top-section-grid .form-group {
+  width: auto;
+  max-width: 100%;
+}
+
+/* Responsive adjustments for top-section-grid on smaller screens */
+@media (max-width: 767px) {
+  .top-section-grid {
+    grid-template-columns: repeat(1, 1fr) !important;
+  }
+  .top-section-grid .form-group[style*="grid-column: span"] {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+/* Form group layout */
+.form-grid .form-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* prevents overflow from long labels/values */
+}
+
+/* Labels */
+.form-grid label {
+  display: block;
+  margin-bottom: .35rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* Inputs/selects/textarea styling (fluid) */
+.form-grid .form-control,
+.form-grid select,
+.form-grid input,
+.form-grid textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: calc(1.5em + .75rem + 2px);
+  padding: .375rem .5rem;
+  border-radius: .25rem;
+}
+
+/* Make sure any wrapper around selects doesn't constrain width */
+.form-grid .select-wrapper {
+  width: 100%;
+  display: block;
+}
+
+/* Multi-select (Select2) fixes — make select2 containers full width */
+.select2-container {
+  width: 100% !important;
+  box-sizing: border-box;
+}
+.select2-container .select2-selection--multiple {
+  min-height: 44px;
+  padding: .15rem .4rem;
+}
+
+/* Error text */
+.form-grid .field-error {
+  color: #dc3545;
+  font-size: .55rem;
+  margin-top: .25rem;
+  min-height: 1.1em; /* prevents layout jump when error text appears/disappears */
+}
+
+/* Helper text */
+.form-grid .form-text {
+  margin-top: .25rem;
+  display: block;
+  color: #6c757d;
+}
+
+/* Focus outlines for keyboard users */
+.form-grid .form-control:focus,
+.form-grid select:focus,
+.form-grid textarea:focus {
+  outline: 3px solid rgba(0,123,255,.12);
+  outline-offset: 0;
+}
+
+/* Make input groups stack nicely on very small screens (if you use input-group inside the grid) */
+@media (max-width: 575.98px) {
+  .form-grid .input-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .form-grid .input-group > .form-control,
+  .form-grid .input-group > .input-group-append,
+  .form-grid .input-group > .input-group-prepend {
+    width: 100%;
+  }
+  .form-grid .input-group .input-group-append,
+  .form-grid .input-group .input-group-prepend {
+    margin-top: .5rem;
+  }
+}
+
+/* Reduce gaps for very narrow screens */
+@media (max-width: 360px) {
+  .form-grid {
+    gap: .5rem;
+  }
+  .form-grid .form-control {
+    padding: .325rem .45rem;
+  }
+}
+
+/* Prevent accidental horizontal scroll from long values */
+.form-grid, .form-grid * {
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+/* Optional: make invalid inputs more visible (matches Bootstrap danger) */
+.form-grid .is-invalid {
+  border-color: #dc3545;
+  box-shadow: none;
+}
+.selectize-control.is-invalid .selectize-input,
+.selectize-control .selectize-input.is-invalid {
+  border: 1px solid #dc3545 !important;
+  box-shadow: 0 0 0 0.2rem rgba(220,53,69,0.25) !important;
+}
+</style>
+<div class="row wrapper border-bottom white-bg page-heading">
+  <div class="col-lg-10">
+    <h2>Employee</h2>
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a class="voucher-link" href="{% url 'authentication:dashboard' %}">Home</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'employee:employee_list' %}?q={{ query|urlencode }}&items_per_page={{ items_per_page }}&page={{ page_obj.number }}">Employee List</a></li>
+      <li class="breadcrumb-item active"><strong>Create</strong></li>
+    </ol>
+  </div>
+  <div class="col-lg-2"></div>
+</div>
+<div class="wrapper wrapper-content">
+  <div class="card-centered" role="region" aria-label="Add employee">
+    <div class="card-body">
+
+      <style>
+        /* Top / bottom split: top has left inputs and right avatar, bottom holds the tabs + panels */
+        .top-section {
+          display: grid;
+          grid-template-columns: 1fr 320px; /* left content + avatar */
+          gap: 20px;
+          align-items: start;
+        }
+
+        .top-left {
+          /* container for the top-left inputs */
+        }
+
+        .top-right {
+          width: 320px;
+          max-width: 320px;
+          margin-left: 100px;
+
+        margin-top: 60px;
+        }
+
+        .bottom-section {
+          margin-top: 20px;
+        }
+
+      
+
+       
+
+      </style>
+<style>
+
+.select-wrapper {
+  text-align: left;  /* or remove text-align entirely */
+}
+.selectize-dropdown-emptyoptionlabel{
+  text-align: left;
+}
+
+
+</style>
+
+      <!-- LEFT: Form -->
+      <div class="form-col">
+        <form id="employeeForm" method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+
+          {# show non-field error if present - use non_field_errors variable provided by view #}
+          {% if non_field_errors %}
+            <div class="alert alert-danger">{{ non_field_errors }}</div>
+          {% endif %}
+
+          <!-- TOP SECTION: left inputs + right avatar (this is one div) -->
+          <div class="top-section" aria-label="Top section: basic info & avatar">
+            <!-- left: top inputs -->
+            <div class="top-left">
+              <div class="form-grid top-section-grid" style="grid-template-columns: repeat(12, 1fr);">
+
+                <!-- First Row: Name, Email, Mobile (3 equal columns) -->
+                <div class="form-group" style="grid-column: span 4;">
+                  <label for="name">Full Name <span class="text-danger">*</span></label>
+                  <input id="name" name="name"
+                         class="form-control {% if errors.name or errors.employeeName %}is-invalid{% endif %} string-only"
+                         value="{{ employee_data.employee_name|default:posted.name|default:'' }}" tabindex="1" />
+                  <div class="field-error" data-error-for="name">
+                    {% if errors.name %}
+                      {{ errors.name }}
+                    {% elif errors.employeeName %}
+                      {{ errors.employeeName }}
+                    {% elif field_errors.name %}
+                      {{ field_errors.name }}
+                    {% elif field_errors.employeeName %}
+                      {{ field_errors.employeeName }}
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group" style="grid-column: span 4;">
+                  <label for="email">Email </label>
+                  <input id="email" name="email" type="email"
+                         class="form-control {% if errors.email or errors.Email %}is-invalid{% endif %}"
+                         value="{{ employee_data.email|default:posted.email|default:'' }}" tabindex="2" />
+                  <div class="field-error" data-error-for="email">
+                    {% if errors.email %}
+                      {{ errors.email }}
+                    {% elif errors.Email %}
+                      {{ errors.Email }}
+                    {% elif field_errors.email %}
+                      {{ field_errors.email }}
+                    {% elif field_errors.Email %}
+                      {{ field_errors.Email }}
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group" style="grid-column: span 4;">
+                  <label for="mobile">Mobile <span class="text-danger">*</span></label>
+                  <input id="mobile" name="mobile"
+                         class="form-control {% if errors.mobile or errors.personal_mobile %}is-invalid{% endif %} only-number"
+                         value="{{ employee_data.personal_mobile|default:posted.mobile|default:'' }}" tabindex="3" maxlength="10" />
+                  <div class="field-error" data-error-for="mobile">
+                    {% if errors.mobile %}
+                      {{ errors.mobile }}
+                    {% elif errors.personal_mobile %}
+                      {{ errors.personal_mobile }}
+                    {% elif field_errors.mobile %}
+                      {{ field_errors.mobile }}
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- Second Row: Gender (4 cols) and Branch (8 cols) -->
+                <div class="form-group" style="grid-column: span 4;">
+                  <label for="gender">Gender <span class="text-danger">*</span></label>
+                  <div class="select-wrapper" aria-hidden="false">
+                    <select id="gender" name="gender" class="{% if errors.gender %} is-invalid{% endif %}" data-placeholder="Select Gender" tabindex="4" required>
+                      <option value="" selected disabled hidden></option>
+                      <option value="male" {% if employee_data.gender == 'male' or posted.gender == 'male' %}selected{% endif %}>Male</option>
+                      <option value="female" {% if employee_data.gender == 'female' or posted.gender == 'female' %}selected{% endif %}>Female</option>
+                      <option value="other" {% if employee_data.gender == 'other' or posted.gender == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                  </div>
+                  <div class="field-error" data-error-for="gender">
+                    {% if errors.gender %}{{ errors.gender }}{% elif field_errors.gender %}{{ field_errors.gender }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group d-none">
+                  <label for="id_lco" class="font-weight-bold">LCO <span class="text-danger">*</span></label>
+                  <select name="lco" id="id_lco"
+                          class="{% if errors.lco %}is-invalid{% endif %}"
+                          {% if disable_lco_select %}disabled{% endif %} tabindex="5">
+                    <option value="">Select LCO</option>
+                    {% for l in lcos %}
+                      <option value="{{ l.id }}"
+                              {% if l.id|stringformat:"s" == lco|stringformat:"s" or l.id|stringformat:"s" == selected_lco_id|stringformat:"s" %}selected{% endif %}>
+                        {{ l.name }}{% if l.code %} ({{ l.code }}){% endif %}
+                      </option>
+                    {% endfor %}
+                  </select>
+
+                  {% if disable_lco_select %}
+                    <!-- Hidden input to submit selected value when dropdown is disabled -->
+                    <input type="hidden" name="lco" value="{{ selected_lco_id }}">
+                  {% endif %}
+
+                  <div class="field-error" data-error-for="lco">
+                    {% if errors.lco %}{{ errors.lco }}{% elif field_errors.lco %}{{ field_errors.lco }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group" style="grid-column: span 8;">
+                  <label for="branch">Branch</label>
+                  <div class="select-wrapper" >
+                    <select id="branch" name="branch" class="{% if errors.branch %}is-invalid{% endif %}" tabindex="6">
+                      <option value="" selected disabled hidden></option>
+                      {% for b in branches %}
+                        <option value="{{ b.id }}" {% if b.id|stringformat:"s" == employee_data.branch_id|stringformat:"s" or b.id|stringformat:"s" == posted.branch|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="field-error" data-error-for="branch">
+                    {% if errors.branch %}{{ errors.branch }}{% elif field_errors.branch %}{{ field_errors.branch }}{% endif %}
+                  </div>
+                </div>
+
+
+
+                <!-- Allowed branches (full width of the top-left area) -->
+                <div class="form-group full-row" style="grid-column: 1 / -1;">
+                  <label for="allowed_branches">Allowed Branches</label>
+                  <div class="select-wrapper" aria-hidden="false">
+                    <select id="allowed_branches"
+                            name="allowed_branches"
+                            class="select2-multi {% if errors.allowed_branches %}is-invalid{% endif %}"
+                            multiple="multiple"
+                            data-placeholder="Select allowed branches" tabindex="6" >
+                      {% for b in branches %}
+                        {% with bval=b.id|stringformat:"s" %}
+                          <option value="{{ b.id }}"
+                            {% if posted.allowed_branches %}
+                              {% if bval in posted.allowed_branches %}selected{% endif %}
+                            {% elif employee_data.allowed_branches %}
+                              {% if bval in employee_data.allowed_branches or b.id in employee_data.allowed_branches %}selected{% endif %}
+                            {% endif %}>
+                            {{ b.name }}
+                          </option>
+                        {% endwith %}
+                      {% endfor %}
+                    </select>
+                  </div>
+
+                  <small class="form-text text-muted">Choose one or more branches the employee is allowed to access.</small>
+                  <div class="field-error" data-error-for="allowed_branches">
+                    {% if errors.allowed_branches %}{{ errors.allowed_branches }}{% elif field_errors.allowed_branches %}{{ field_errors.allowed_branches }}{% endif %}
+                  </div>
+                </div>
+
+              </div> <!-- /.form-grid (top-left) -->
+            </div> <!-- /.top-left -->
+
+            <!-- right: avatar -->
+<div>
+    <div class="photo-card mx-auto">
+    <label class="form-label mb-2">Photo</label>
+
+    <!-- hidden flag: set to "1" when user clicks remove -->
+    <input type="hidden" name="delete_image" id="id_delete_image" value="{{ delete_image|default:'0' }}">
+<input type="file" name="image" id="id_image" accept="image/*" style="display:none;">
+
+    <!-- preview wrapper -->
+    <div class="img-wrap text-center" aria-hidden="false" style="width:100%; max-width:260px; margin:0 auto;">
+      {% if image_url %}
+        <img id="imagePreview" src="{{ image_url }}" alt="Customer photo preview" style="width:100%; height:160px; object-fit:cover; border-radius:6px;">
+        <div id="imagePlaceholder" class="image-placeholder" style="display:none; padding:18px; color:#6c757d;">
+          <div style="font-size:18px; font-weight:600;">No image</div>
+          <div class="help-muted">Upload JPG/PNG — recommended ≤ 2MB</div>
+        </div>
+      {% else %}
+        <img id="imagePreview" src="" alt="Customer photo preview" style="display:none; width:100%; height:160px; object-fit:cover; border-radius:6px;">
+        <div id="imagePlaceholder" class="image-placeholder" style="padding:18px; color:#6c757d;">
+          <div style="font-size:18px; font-weight:600;">No image</div>
+          <div class="help-muted">Upload JPG/PNG — recommended ≤ 2MB</div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- hidden file input (we use custom buttons instead) -->
+    <input type="file" name="image" id="id_image" accept="image/*" style="display:none;" class="{% if errors.image %}is-invalid{% endif %}">
+
+    <!-- custom controls -->
+    <div class="mt-2 d-flex justify-content-center" style="gap:8px;">
+      <button type="button" id="btnChooseImage" class="btn btn-sm btn-primary" tabindex="5">
+        <i class="fa fa-folder-open mr-1"></i> Choose
+      </button>
+
+      <button type="button" id="btnRemoveImage" class="btn btn-sm btn-danger" tabindex="6"
+              {% if not image_url %}style="display:none;"{% endif %}>
+        <i class="fa fa-times mr-1"></i> Remove
+      </button>
+    </div>
+
+    {% if errors.image %}<small class="text-danger d-block mt-2">{{ errors.image }}</small>{% endif %}
+  </div>
+  <div class="form-check mt-3 text-center">
+    <input class="form-check-input" type="checkbox" value="1" id="id_is_active" name="is_active" checked >
+    <label class="form-check-label" for="id_is_active">
+        Active
+    </label>
+</div>
+</div>
+          </div> <!-- /.top-section -->
+
+          <!-- BOTTOM SECTION: tabs + panels (this is second div, spans full width) -->
+          <div class="bottom-section" aria-label="Tabs and detailed panels">
+            <!-- Tabs -->
+            <div class="tabs" role="tablist" aria-label="Employee sections">
+              <button type="button" id="tab-working" class="tab-btn active" aria-controls="panel-working">Working Info</button>
+              <button type="button" id="tab-salary" class="tab-btn" aria-controls="panel-salary">Salary</button>
+              <button type="button" id="tab-personal" class="tab-btn" aria-controls="panel-personal">Personal Info</button>
+              <button type="button" id="tab-login" class="tab-btn" aria-controls="panel-login">Login Info</button>
+            </div>
+
+            <!-- WORKING -->
+            <div id="panel-working" class="panel-section">
+              <h3 class="section-title">Work Details</h3>
+              <div class="form-grid three-col" style="grid-template-columns: repeat(3, 1fr)">
+
+                <div class="form-group">
+                  <label for="position">Position <span class="text-danger">*</span></label>
+                  <div class="select-wrapper">
+                    <select id="position" name="position" class="{% if errors.position %}is-invalid{% endif %}" tabindex="7" required>
+          <option value="" selected disabled hidden></option>
+      <!-- CREATE sentinel -->
+      <option value="__create_position__">+ Create|Edit position</option>
+      {% for p in job_positions %}
+        <option value="{{ p.id }}"
+          {% if p.id|stringformat:"s" == employee_data.position_id|stringformat:"s" or p.id|stringformat:"s" == posted.position|stringformat:"s" %}
+            selected
+          {% endif %}
+        >
+          {{ p.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field-error" data-error-for="position">
+    {% if errors.position %}{{ errors.position }}{% elif field_errors.position %}{{ field_errors.position }}{% endif %}
+  </div>
+</div>
+<div class="form-group">
+  <label for="department">Department <span class="text-danger">*</span></label>
+  <div class="select-wrapper">
+    <select id="department" name="department" class="{% if errors.department %}is-invalid{% endif %}" tabindex="8" required>
+          <option value="" selected disabled hidden></option>
+      <!-- CREATE sentinel -->
+      <option value="__create_department__">+ Create|Edit department</option>
+      {% for d in departments %}
+        <option value="{{ d.id }}"
+          {% if d.id|stringformat:"s" == employee_data.department_id|stringformat:"s" or d.id|stringformat:"s" == posted.department|stringformat:"s" %}
+            selected
+          {% endif %}
+        >
+          {{ d.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field-error" data-error-for="department">
+    {% if errors.department %}{{ errors.department }}{% elif field_errors.department %}{{ field_errors.department }}{% endif %}
+  </div>
+</div>
+
+                <div class="form-group">
+                  <label for="manager">Manager</label>
+                  <div class="select-wrapper">
+                    <select id="manager" name="manager"
+                            class="{% if errors.manager %}is-invalid{% endif %}" tabindex="9">
+          <option value="" selected disabled hidden></option>
+                      {% for m in managers %}
+                        {% with m.id|stringformat:"s" as mid %}
+                        {% with employee_data.manager_id|stringformat:"s" as eid %}
+                        {% with posted.manager|stringformat:"s" as pid %}
+                          <option value="{{ m.id }}"
+                            {% if mid == eid or mid == pid %}selected{% endif %}>
+                            {{ m.employee_name }}
+                          </option>
+                        {% endwith %}
+                        {% endwith %}
+                        {% endwith %}
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="field-error" data-error-for="manager">
+                    {% if errors.manager %}{{ errors.manager }}
+                    {% elif field_errors.manager %}{{ field_errors.manager }}{% endif %}
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="employeeId">Employee ID <span class="text-danger">*</span></label>
+                  <input id="employeeId" name="employeeId"
+                         class="form-control {% if errors.employee_id or errors.employeeId %}is-invalid{% endif %}"
+                         value="{{ employee_data.employee_id|default:posted.employeeId|default:'' }}" tabindex="10" />
+                  <div class="field-error" data-error-for="employeeId">
+                    {% if errors.employeeId %}
+                      {{ errors.employeeId }}
+                    {% elif errors.employee_id %}
+                      {{ errors.employee_id }}
+                    {% elif field_errors.employeeId %}
+                      {{ field_errors.employeeId }}
+                    {% elif field_errors.employee_id %}
+                      {{ field_errors.employee_id }}
+                    {% endif %}
+                  </div>
+                </div>
+
+
+                <div class="form-group">
+                  <label for="workEmail">Work Email </label>
+                  <input id="workEmail" name="workEmail" type="email"
+                         class="form-control {% if errors.workEmail or errors.work_email %}is-invalid{% endif %}"
+                         value="{{ employee_data.work_email|default:posted.workEmail|default:'' }}" tabindex="11" />
+                  <div class="field-error" data-error-for="workEmail">
+                    {% if errors.workEmail %}{{ errors.workEmail }}{% elif errors.work_email %}{{ errors.work_email }}{% elif field_errors.workEmail %}{{ field_errors.workEmail }}{% elif field_errors.work_email %}{{ field_errors.work_email }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="workMobile">Work Mobile </label>
+                  <input id="workMobile" name="workMobile" type="tel" pattern="[0-9]"
+                         class="form-control {% if errors.workMobile %}is-invalid{% endif %} only-number"
+                         value="{{ employee_data.work_mobile|default:posted.workMobile|default:'' }}" tabindex="12" maxlength="10" />
+                  <div class="field-error" data-error-for="workMobile">
+                    {% if errors.workMobile %}{{ errors.workMobile }}{% elif field_errors.workMobile %}{{ field_errors.workMobile }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="workPhone">Work Phone </label>
+                  <input id="workPhone" name="workPhone"
+                         class="form-control {% if errors.workPhone %}is-invalid{% endif %} only-number"
+                         value="{{ employee_data.work_phone|default:posted.workPhone|default:'' }}" tabindex="13" maxlength="10" />
+                  <div class="field-error" data-error-for="workPhone">
+                    {% if errors.workPhone %}{{ errors.workPhone }}{% elif field_errors.workPhone %}{{ field_errors.workPhone }}{% endif %}
+                  </div>
+                </div>
+
+
+
+                <div class="form-group">
+                  <label for="workLocation">Work Location </label>
+                  <input id="workLocation" name="workLocation"
+                         class="form-control {% if errors.workLocation %}is-invalid{% endif %}"
+                         value="{{ employee_data.work_location|default:posted.workLocation|default:'' }}" tabindex="14" />
+                  <div class="field-error" data-error-for="workLocation">
+                    {% if errors.workLocation %}{{ errors.workLocation }}{% elif field_errors.workLocation %}{{ field_errors.workLocation }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group d-none" >
+                  <label for="visaNumber">Visa Number</label>
+                  <input id="visaNumber" name="visaNumber" class="form-control"
+                         value="{{ employee_data.visa_number|default:posted.visaNumber|default:'' }}" tabindex="16" />
+                </div>
+
+                <div class="form-group d-none">
+                  <label for="workPermitNumber">Work permit No</label>
+                  <input id="workPermitNumber" name="workPermitNumber" class="form-control"
+                         value="{{ employee_data.work_permit|default:posted.workPermitNumber|default:'' }}" tabindex="17" />
+                </div>
+
+                <div class="form-group d-none">
+                  <label for="visaExpDate">Visa Expiry Date</label>
+                  <input id="visaExpDate" name="visaExpDate" type="date" class="form-control"
+                         value="{{ employee_data.visa_expiry_date|default:posted.visaExpDate|default:'' }}"   tabindex="18" />
+                </div>
+
+              </div> <!-- /.form-grid (working) -->
+            </div> <!-- /.panel-working -->
+
+            <!-- SALARY -->
+            <div id="panel-salary" class="panel-section" style="display:none;">
+              <h3 class="section-title">Salary</h3>
+              <div class="form-grid three-col" style="grid-template-columns: repeat(3, 1fr)">
+
+                <div class="form-group">
+                  <label for="basicSalary">Basic Salary </label>
+                  <input id="basicSalary" name="basicSalary" type="number" step="0.01" min="0"
+                         class="form-control {% if errors.basicSalary %}is-invalid{% endif %} decimal-number"
+                         value="{{ employee_data.basic_salary|default:posted.basicSalary|default:'' }}" tabindex="15"  style="text-align: right;"/>
+                  <div class="field-error" data-error-for="basicSalary">
+                    {% if errors.basicSalary %}{{ errors.basicSalary }}{% elif field_errors.basicSalary %}{{ field_errors.basicSalary }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="da">DA (Dearness Allowance) </label>
+                  <input id="da" name="da" type="number" step="0.01" min="0"
+                         class="form-control {% if errors.da %}is-invalid{% endif %} decimal-number"
+                         value="{{ employee_data.da|default:posted.da|default:'' }}" tabindex="16" style="text-align: right;" />
+                  <div class="field-error" data-error-for="da">
+                    {% if errors.da %}{{ errors.da }}{% elif field_errors.da %}{{ field_errors.da }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="hra">HRA (House Rent Allowance) </label>
+                  <input id="hra" name="hra" type="number" step="0.01" min="0"
+                         class="form-control {% if errors.hra %}is-invalid{% endif %} decimal-number"
+                         value="{{ employee_data.hra|default:posted.hra|default:'' }}" tabindex="17" style="text-align: right;" />
+                  <div class="field-error" data-error-for="hra">
+                    {% if errors.hra %}{{ errors.hra }}{% elif field_errors.hra %}{{ field_errors.hra }}{% endif %}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- PERSONAL -->
+            <div id="panel-personal" class="panel-section" style="display:none;">
+              <h3 class="section-title">Personal Information</h3>
+              <div class="form-grid three-col" style="grid-template-columns: repeat(3, 1fr)">
+
+                <div class="form-group">
+                  <label for="address">Address</label>
+                  <input id="address" name="address" class="form-control {% if errors.address %}is-invalid{% endif %}"
+                         value="{{ employee_data.address_line1|default:posted.address|default:'' }}" tabindex="18" />
+                  <div class="field-error" data-error-for="address">
+                    {% if errors.address %}{{ errors.address }}{% elif field_errors.address %}{{ field_errors.address }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="dateOfBirth">Date of Birth </label>
+                  <input id="dateOfBirth" name="dateOfBirth" type="date" class="form-control {% if errors.dateOfBirth %}is-invalid{% endif %}"
+                         max="" value="{{ employee_data.date_of_birth|default:posted.dateOfBirth|default:'' }}" tabindex="19" />
+                  <div class="field-error" data-error-for="dateOfBirth">
+                    {% if errors.dateOfBirth %}{{ errors.dateOfBirth }}{% elif field_errors.dateOfBirth %}{{ field_errors.dateOfBirth }}{% endif %}
+                  </div>
+                </div>
+
+              <div class="form-group">
+                <label for="maritalStatus">Marital Status </label>
+                <div class="select-wrapper">
+                  <select id="maritalStatus" name="maritalStatus"
+                          class=" selectize-marital {% if errors.maritalStatus %}is-invalid{% endif %}" tabindex="20">
+          <option value="" selected disabled hidden></option>
+                    <option value="__create_marital_status__">+ Add More</option>
+                  {% for status in marital_statuses %}
+                    <option value="{{ status.id }}"
+                      {% if status.id|stringformat:"s" == employee_data.marital_status|stringformat:"s" or status.id|stringformat:"s" == posted.maritalStatus|stringformat:"s" %}
+                        selected
+                      {% endif %}
+                    >{{ status.name }}</option>
+                  {% endfor %}
+
+                  </select>
+                </div>
+                <div class="field-error" data-error-for="maritalStatus">
+                  {% if errors.maritalStatus %}{{ errors.maritalStatus }}{% elif field_errors.maritalStatus %}{{ field_errors.maritalStatus }}{% endif %}
+                </div>
+              </div>
+
+
+                <div class="form-group">
+                  <label for="country">Country </label>
+                  <div class="select-wrapper">
+                  <select id="id_country" name="country" class="{% if errors.country %}is-invalid{% endif %}" tabindex="21" >
+          <option value="" selected disabled hidden></option>
+                      </select>
+                  </div>
+                  <div class="field-error" data-error-for="country">
+                    {% if errors.country %}{{ errors.country }}{% elif field_errors.country %}{{ field_errors.country }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="state">State </label>
+                  <div class="select-wrapper">
+                    <!-- <select id="state" name="state" class="form-control {% if errors.state %}is-invalid{% endif %}" data-placeholder="Select State" data-selected="{{ employee_data.state|default:posted.state|default:'' }}">
+                      <option value="">Select State</option>
+                      {% if employee_data.state %}
+                        <option value="{{ employee_data.state }}" selected>{{ employee_data.state }}</option>
+                      {% elif posted.state %}
+                        <option value="{{ posted.state }}" selected>{{ posted.state }}</option>
+                      {% endif %}
+                    </select> -->
+                <select id="id_state" name="state" tabindex="22">
+          <option value="" selected disabled hidden></option>
+              </select>
+                  </div>
+                  <div class="field-error" data-error-for="state">
+                    {% if errors.state %}{{ errors.state }}{% elif field_errors.state %}{{ field_errors.state }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="district">District </label>
+                  <div class="select-wrapper">
+                    <!-- <select id="district" name="district" class="form-control {% if errors.district %}is-invalid{% endif %}" data-placeholder="Select District" data-selected="{{ employee_data.district|default:posted.district|default:'' }}">
+                      <option value="">Select District</option>
+                      {% if employee_data.district %}
+                        <option value="{{ employee_data.district }}" selected>{{ employee_data.district }}</option>
+                      {% elif posted.district %}
+                        <option value="{{ posted.district }}" selected>{{ posted.district }}</option>
+                      {% endif %}
+                    </select> -->
+                  <select id="id_district" name="district" tabindex="23" data-selected="{{ posted.district|default:employee_data.district|default:'' }}">
+          <option value="" selected disabled hidden></option>
+                  </select>
+
+                  </div>
+                  <div class="field-error" data-error-for="district">
+                    {% if errors.district %}{{ errors.district }}{% elif field_errors.district %}{{ field_errors.district }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="city">City </label>
+                  <input id="city" name="city" class="form-control {% if errors.city %}is-invalid{% endif %}"
+                         value="{{ employee_data.city|default:posted.city|default:'' }}" tabindex="24" />
+                  <div class="field-error" data-error-for="city">
+                    {% if errors.city %}{{ errors.city }}{% elif field_errors.city %}{{ field_errors.city }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="pinCode">Pin Code </label>
+                  <input id="pinCode" name="pinCode" class="form-control {% if errors.pinCode %}is-invalid{% endif %} only-number"
+                         value="{{ employee_data.pincode|default:posted.pinCode|default:'' }}" tabindex="25" maxlength="6" />
+                  <div class="field-error" data-error-for="pinCode">
+                    {% if errors.pinCode %}{{ errors.pinCode }}{% elif field_errors.pinCode %}{{ field_errors.pinCode }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="aadhaarNumber">Aadhaar Number</label>
+                  <input id="aadhaarNumber" name="aadhaarNumber" class="form-control {% if errors.aadhaarNumber %}is-invalid{% endif %} only-number"
+                         inputmode="numeric" maxlength="12" pattern="\d{12}"
+                         value="{{ employee_data.aadhaar_number|default:posted.aadhaarNumber|default:'' }}" tabindex="26" />
+                  <div class="field-error" data-error-for="aadhaarNumber">
+                    {% if errors.aadhaarNumber %}{{ errors.aadhaarNumber }}{% elif field_errors.aadhaarNumber %}{{ field_errors.aadhaarNumber }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="passportNumber">Passport No</label>
+                  <input id="passportNumber" name="passportNumber" class="form-control {% if errors.passportNumber %}is-invalid{% endif %}"
+                         value="{{ employee_data.passport_number|default:posted.passportNumber|default:'' }}" tabindex="27" />
+                  <div class="field-error" data-error-for="passportNumber">
+                    {% if errors.passportNumber %}{{ errors.passportNumber }}{% elif field_errors.passportNumber %}{{ field_errors.passportNumber }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="numberOfChildren">Number of Children</label>
+                  <input id="numberOfChildren" name="numberOfChildren" class="form-control {% if errors.numberOfChildren %}is-invalid{% endif %} only-number"
+                         value="{{ employee_data.number_of_children|default:posted.numberOfChildren|default:'' }}" tabindex="28" />
+                  <div class="field-error" data-error-for="numberOfChildren">
+                    {% if errors.numberOfChildren %}{{ errors.numberOfChildren }}{% elif field_errors.numberOfChildren %}{{ field_errors.numberOfChildren }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="emgContactName">Emergency Contact Name</label>
+                  <input id="emgContactName" name="emgContactName" class="form-control string-only"
+                         value="{{ employee_data.emergency_contact_name|default:posted.emgContactName|default:'' }}" tabindex="29" />
+                </div>
+
+                <div class="form-group">
+                  <label for="emgPhone">Emergency Phone</label>
+                  <input id="emgPhone" name="emgPhone" class="form-control only-number" maxlength="10"
+                         value="{{ employee_data.emergency_contact|default:posted.emgPhone|default:'' }}" tabindex="30" />
+                </div>
+
+              </div> <!-- /.form-grid (personal) -->
+            </div> <!-- /.panel-personal -->
+
+            <!-- LOGIN -->
+            <div id="panel-login" class="panel-section" style="display:none;">
+              <h3 class="section-title">Login</h3>
+              <div class="form-grid two-col" style="grid-template-columns: repeat(2,1fr);">
+                <div class="form-group relative">
+                  <label for="employee_type">Type <span class="text-danger">*</span> </label>
+                  <div class="select-wrapper">
+                    <select id="employee_type"
+                            name="type"
+                            class="{% if errors.type %}is-invalid{% endif %}" tabindex="31">
+          <option value="" selected disabled hidden></option>
+                      <option value="limited"
+                        {% if posted.type == 'limited' or employee_data.type == 'limited' %}selected{% endif %}>
+                        Limited
+                      </option>
+                      <option value="admin"
+                        {% if posted.type == 'admin' or employee_data.type == 'admin' %}selected{% endif %}>
+                        Admin
+                      </option>
+                    </select>
+                  </div>
+                  <div class="field-error" data-error-for="type">
+                    {% if errors.type %}{{ errors.type }}{% endif %}
+                  </div>
+                </div>
+                 <div class="form-group relative">
+                  <label for="username">Username <span class="text-danger">*</span></label>
+                  <input id="username" name="username" type="text" class="form-control {% if errors.username %}is-invalid{% endif %}" tabindex="32" />
+                  <div class="field-error" data-error-for="username">
+                    {% if errors.username %}{{ errors.username }}{% elif field_errors.username %}{{ field_errors.username }}{% endif %}
+                  </div>
+                </div>
+                <div class="form-group relative">
+                  <label for="password">Password <span class="text-danger">*</span></label>
+                  <input id="password" name="password" type="password" class="form-control {% if errors.password %}is-invalid{% endif %}" tabindex="33" />
+                  <button type="button" class="password-toggle" data-target="password">Show</button>
+                  <div class="field-error" data-error-for="password">
+                    {% if errors.password %}{{ errors.password }}{% elif field_errors.password %}{{ field_errors.password }}{% endif %}
+                  </div>
+                </div>
+
+                <div class="form-group relative">
+                  <label for="confirmPassword">Confirm Password <span class="text-danger">*</span></label>
+                  <input id="confirmPassword" name="confirmPassword" type="password" class="form-control {% if errors.confirmPassword %}is-invalid{% endif %}" tabindex="34" />
+                  <button type="button" class="password-toggle" data-target="confirmPassword">Show</button>
+                  <div class="field-error" data-error-for="confirmPassword">
+                    {% if errors.confirmPassword %}{{ errors.confirmPassword }}{% elif field_errors.confirmPassword %}{{ field_errors.confirmPassword }}{% endif %}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+            <script>
+              document.addEventListener("DOMContentLoaded", function () {
+                document.querySelectorAll(".password-toggle").forEach(function (button) {
+                  button.addEventListener("click", function () {
+                    var targetId = button.getAttribute("data-target");
+                    var input = document.getElementById(targetId);
+                    if (input) {
+                      if (input.type === "password") {
+                        input.type = "text";
+                        button.textContent = "Hide";
+                      } else {
+                        input.type = "password";
+                        button.textContent = "Show";
+                      }
+                    }
+                  });
+                });
+              });
+            </script>
+
+            <!-- Submit -->
+            <div class="actions" style="margin-top:12px;">
+                                <a href="{% url 'employee:employee_list' %}" class="btn btn-secondary"><i class="fa fa-arrow-left mr-1"></i> Back</a>
+
+              <!-- <a href="{% url 'employee:employee_list' %}" class="btn btn-secondary">Cancel</a> -->
+              <button type="submit" class="btn btn-primary btn-primary-strong ladda-button ladda-button-demo">Save</button>
+            </div>
+
+          </div> <!-- /.bottom-section -->
+
+        </form>
+      </div> <!-- /.form-col -->
+
+    </div> <!-- .card-body -->
+  </div> <!-- .card-centered -->
+</div> <!-- .wrapper -->
+
+<style>
+  /* ---------- general modal layout ---------- */
+  .modal.fixed-size .modal-dialog { max-width: 900px; }
+  .modal.fixed-size .modal-body { padding: 18px; }
+
+  /* container: two columns */
+  .modal-split { display: flex; gap: 18px; align-items: stretch; }
+
+  /* left form panel (highlighted) */
+  .panel-left {
+  /* ~48% width for left */
+  flex: 0 1 48%;
+  background: #f7fbff;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 6px 12px rgba(16,24,40,0.03);
+  min-width: 220px; /* prevents extremely narrow left column */
+}
+
+  /* right list panel */
+  .panel-right {
+  /* ~52% width for right (slightly larger) */
+  flex: 0 1 52%;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 6px 12px rgba(16,24,40,0.03);
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
+}
+
+  /* headings */
+  .panel-heading { font-weight: 700; margin-bottom: 8px; color: #0b2545; padding: 1px 1px; }
+
+  /* inputs */
+  .panel-left .form-control, .panel-right .form-control { border-radius: 6px; }
+
+  /* list-box: show ~4 rows */
+  .list-box {
+    height: calc(4 * 48px + 12px); /* approx 4 rows */
+    overflow-y: auto;
+    border: 1px solid #eef2f6;
+    border-radius: 6px;
+    padding: 8px;
+    background: #fbfdff;
+  }
+
+  /* list row */
+  .list-row {
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:8px 6px;
+    border-bottom: 1px solid rgba(12,16,22,0.03);
+    align-items:center;
+    height: 48px;
+    box-sizing: border-box;
+  }
+  .list-row:last-child { border-bottom: none; }
+  .list-row .title { font-weight:600; color:#0b2545; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%; }
+  .list-row .meta { font-size: .85rem; color:#6b7280; }
+
+  /* empty state */
+  .list-empty { text-align:center; padding:18px; color:#6b7280; }
+
+  /* small responsive tweaks */
+  @media (max-width: 768px) {
+    .modal-split { flex-direction: column; }
+    .panel-left { border-left: none; border-top: 4px solid #0069d9; }
+    .panel-right { min-width: auto; width: 100%; }
+  }
+
+  /* optional small helper for the internal "row" used earlier in examples */
+   #positionList, #departmentList {
+    border: 1px solid #e9ecef;
+    padding: 8px;
+    border-radius: 4px;
+    overflow-y: auto;
+    max-height: 340px;
+    background: #fff;
+  }
+</style>
+
+
+<!-- Position modal -->
+<div class="modal fade fixed-size" id="modalCreatePosition" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <form id="formCreatePosition" novalidate>
+        <div class="modal-header">
+          <h5 class="modal-title"><span id="positionModalTitle">Create Position</span></h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">×</button>
+        </div>
+        <div class="modal-body">
+          {% csrf_token %}
+          <div class="modal-split d-flex">
+            <!-- LEFT: form -->
+            <div class="panel-left" style="flex:1; padding-right:16px;">
+              <div class="panel-heading">Position</div>
+              <input type="hidden" id="create_position_id" value="">
+              <div class="form-group">
+                <label for="create_position_name">Name <span class="text-danger">*</span></label>
+                <input type="text" id="create_position_name" name="name" class="form-control" required autocomplete="off">
+                <small class="text-danger d-none" id="create_position_name_error"></small>
+              </div>
+              <div class="form-group">
+                <label for="create_position_code">Code (optional) </label>
+                <input type="text" id="create_position_code" name="code" class="form-control" autocomplete="off">
+                <small class="text-danger d-none" id="create_position_code_error"></small>
+              </div>
+              <div class="alert alert-danger d-none" id="create_position_nonfield"></div>
+              <div class="d-flex justify-content-end" style="gap:8px; margin-top:12px;">
+                <button type="button" id="createPositionBtn" class="btn btn-primary">Create</button>
+                <button type="button" id="updatePositionBtn" class="btn btn-primary d-none">Update</button>
+                <button type="button" id="positionCancelEditBtn" class="btn btn-outline-secondary d-none">Cancel Edit</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              </div>
+            </div>
+
+            <!-- RIGHT: search + list -->
+            <div class="panel-right" style="width:420px; margin-left:12px;">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="panel-heading">Existing Positions</div>
+                <div><small class="text-muted" id="positionListCount">0</small></div>
+              </div>
+              <div style="margin-bottom:10px;">
+                <div class="input-group input-group-sm">
+                  <input type="search" id="positionListSearch" class="form-control form-control-sm" placeholder="Search positions..." autocomplete="off">
+                </div>
+              </div>
+              <div id="positionList" class="list-box" style="max-height:340px; overflow:auto;">
+                <div class="list-empty">Loading…</div>
+              </div>
+              <div class="mt-2" style="font-size:13px;color:#6b7280;">Tip: search to filter; click Edit to load into the form.</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Department modal -->
+<div class="modal fade fixed-size" id="modalCreateDepartment" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <form id="formCreateDepartment" novalidate>
+        <div class="modal-header">
+          <h5 class="modal-title"><span id="departmentModalTitle">Create Department</span></h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">×</button>
+        </div>
+        <div class="modal-body">
+          {% csrf_token %}
+          <div class="modal-split d-flex">
+            <!-- LEFT: form -->
+            <div class="panel-left" style="flex:1; padding-right:16px;">
+              <div class="panel-heading">Department</div>
+              <input type="hidden" id="create_department_id" value="">
+              <div class="form-group">
+                <label for="create_department_name">Name <span class="text-danger">*</span></label>
+                <input type="text" id="create_department_name" name="name" class="form-control" required autocomplete="off">
+                <small class="text-danger d-none" id="create_department_name_error"></small>
+              </div>
+              <div class="form-group">
+                <label for="create_department_code">Code (optional)</label>
+                <input type="text" id="create_department_code" name="code" class="form-control" autocomplete="off">
+                <small class="text-danger d-none" id="create_department_code_error"></small>
+              </div>
+              <div class="alert alert-danger d-none" id="create_department_nonfield"></div>
+              <div class="d-flex justify-content-end" style="gap:8px; margin-top:12px;">
+                <button type="button" id="createDepartmentBtn" class="btn btn-primary">Create</button>
+                <button type="button" id="updateDepartmentBtn" class="btn btn-primary d-none">Update</button>
+                <button type="button" id="departmentCancelEditBtn" class="btn btn-outline-secondary d-none">Cancel Edit</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              </div>
+            </div>
+
+            <!-- RIGHT: search + list -->
+            <div class="panel-right" style="width:420px; margin-left:12px;">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="panel-heading">Existing Departments</div>
+                <div><small class="text-muted" id="departmentListCount">0</small></div>
+              </div>
+              <div style="margin-bottom:10px;">
+                <div class="input-group input-group-sm">
+                  <input type="search" id="departmentListSearch" class="form-control form-control-sm" placeholder="Search departments..." autocomplete="off">
+                </div>
+              </div>
+              <div id="departmentList" class="list-box" style="max-height:340px; overflow:auto;">
+                <div class="list-empty">Loading…</div>
+              </div>
+              <div class="mt-2" style="font-size:13px;color:#6b7280;">Tip: search to filter; click Edit to load into the form.</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade fixed-size" id="modalCreateMaritalStatus" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <form id="formCreateMaritalStatus" novalidate>
+        <div class="modal-header">
+          <h5 class="modal-title"><span id="maritalStatusModalTitle">Create Marital Status</span></h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">×</button>
+        </div>
+
+        <div class="modal-body">
+          {% csrf_token %}
+          <div class="modal-split d-flex">
+            <!-- LEFT PANEL: Create/Edit form -->
+            <div class="panel-left" style="flex:1; padding-right:16px;">
+              <div class="panel-heading">Marital Status</div>
+              <input type="hidden" id="create_marital_status_id" value="">
+
+              <div class="form-group">
+                <label for="create_marital_status_name">Name <span class="text-danger">*</span></label>
+                <input type="text" id="create_marital_status_name" name="name" class="form-control" required autocomplete="off">
+                <small class="text-danger d-none" id="create_marital_status_name_error"></small>
+              </div>
+
+              <div class="form-group d-none">
+                <label for="create_marital_status_code">Description (optional)</label>
+                <input type="text" id="create_marital_status_code" name="code" class="form-control " autocomplete="off">
+                <small class="text-danger d-none" id="create_marital_status_code_error"></small>
+              </div>
+
+              <div class="alert alert-danger d-none" id="create_marital_status_nonfield"></div>
+
+              <div class="d-flex justify-content-end" style="gap:8px; margin-top:12px;">
+                <button type="button" id="createMaritalStatusBtn" class="btn btn-primary">Create</button>
+                <button type="button" id="updateMaritalStatusBtn" class="btn btn-primary d-none">Update</button>
+                <button type="button" id="maritalStatusCancelEditBtn" class="btn btn-outline-secondary d-none">Cancel Edit</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              </div>
+            </div>
+
+            <!-- RIGHT PANEL: Existing list -->
+            <div class="panel-right" style="width:420px; margin-left:12px;">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="panel-heading">Existing Marital Statuses</div>
+                <div><small class="text-muted" id="maritalStatusListCount">0</small></div>
+              </div>
+
+              <div style="margin-bottom:10px;">
+                <div class="input-group input-group-sm">
+                  <input type="search" id="maritalStatusListSearch" class="form-control form-control-sm" placeholder="Search marital statuses..." autocomplete="off">
+                </div>
+              </div>
+
+              <div id="maritalStatusList" class="list-box" style="max-height:340px; overflow:auto;">
+                <div class="list-empty">Loading…</div>
+              </div>
+
+              <div class="mt-2" style="font-size:13px;color:#6b7280;">
+                Tip: search to filter; click Edit to load into the form.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+{% endblock %}
+{% block extra_scripts %}
+
+<script>
+/**
+ * Sequential Tab Navigation System
+ * Handles automatic tab navigation through all form sections:
+ * 1. Top section (basic info)
+ * 2. Working Info tab
+ * 3. Salary tab
+ * 4. Personal Info tab
+ * 5. Login Info tab
+ * Then cycles back to first input
+ */
+(function($) {
+  $(document).ready(function() {
+    // Define all form inputs in sequential order with their tabindex
+    var formFields = [
+      // Top Section (Basic Info)
+      { selector: '#name', tabindex: 1, section: 'top' },
+      { selector: '#email', tabindex: 2, section: 'top' },
+      { selector: '#mobile', tabindex: 3, section: 'top' },
+      { selector: '#gender', tabindex: 4, section: 'top' },
+      { selector: '#branch', tabindex: 5, section: 'top' },
+      { selector: '#allowed_branches', tabindex: 6, section: 'top' },
+      
+      // Working Info Section
+      { selector: '#position', tabindex: 7, section: 'working', panel: '#panel-working', tabBtn: '#tab-working' },
+      { selector: '#department', tabindex: 8, section: 'working', panel: '#panel-working', tabBtn: '#tab-working' },
+      { selector: '#manager', tabindex: 9, section: 'working', panel: '#panel-working', tabBtn: '#tab-working' },
+      { selector: '#employeeId', tabindex: 10, section: 'working', panel: '#panel-working', tabBtn: '#tab-working' },
+      { selector: '#workEmail', tabindex: 11, section: 'working', panel: '#panel-working', tabBtn: '#tab-working' },
+      { selector: '#workMobile', tabindex: 12, section: 'working', panel: '#panel-working', tabBtn: '#tab-working' },
+      { selector: '#workPhone', tabindex: 13, section: 'working', panel: '#panel-working', tabBtn: '#tab-working' },
+      { selector: '#workLocation', tabindex: 14, section: 'working', panel: '#panel-working', tabBtn: '#tab-working' },
+      
+      // Salary Section
+      { selector: '#basicSalary', tabindex: 15, section: 'salary', panel: '#panel-salary', tabBtn: '#tab-salary' },
+      { selector: '#da', tabindex: 16, section: 'salary', panel: '#panel-salary', tabBtn: '#tab-salary' },
+      { selector: '#hra', tabindex: 17, section: 'salary', panel: '#panel-salary', tabBtn: '#tab-salary' },
+      
+      // Personal Info Section
+      { selector: '#address', tabindex: 18, section: 'personal', panel: '#panel-personal', tabBtn: '#tab-personal' },
+      { selector: '#dateOfBirth', tabindex: 19, section: 'personal', panel: '#panel-personal', tabBtn: '#tab-personal' },
+      { selector: '#maritalStatus', tabindex: 20, section: 'personal', panel: '#panel-personal', tabBtn: '#tab-personal' },
+      { selector: '#id_country', tabindex: 21, section: 'personal', panel: '#panel-personal', tabBtn: '#tab-personal' },
+      { selector: '#id_state', tabindex: 22, section: 'personal', panel: '#panel-personal', tabBtn: '#tab-personal' },
+      { selector: '#id_district', tabindex: 23, section: 'personal', panel: '#panel-personal', tabBtn: '#tab-personal' },
+      { selector: '#city', tabindex: 24, section: 'personal', panel: '#panel-personal', tabBtn: '#tab-personal' },
+      { selector: '#pinCode', tabindex: 25, section: 'personal', panel: '#panel-personal', tabBtn: '#tab-personal' },
+      { selector: '#aadhaarNumber', tabindex: 26, section: 'personal', panel: '#panel-personal', tabBtn: '#tab-personal' },
+      { selector: '#passportNumber', tabindex: 27, section: 'personal', panel: '#panel-personal', tabBtn: '#tab-personal' },
+      { selector: '#numberOfChildren', tabindex: 28, section: 'personal', panel: '#panel-personal', tabBtn: '#tab-personal' },
+      { selector: '#emgContactName', tabindex: 29, section: 'personal', panel: '#panel-personal', tabBtn: '#tab-personal' },
+      { selector: '#emgPhone', tabindex: 30, section: 'personal', panel: '#panel-personal', tabBtn: '#tab-personal' },
+      
+      // Login Info Section
+      { selector: '#employee_type', tabindex: 31, section: 'login', panel: '#panel-login', tabBtn: '#tab-login' },
+      { selector: '#username', tabindex: 32, section: 'login', panel: '#panel-login', tabBtn: '#tab-login' },
+      { selector: '#password', tabindex: 33, section: 'login', panel: '#panel-login', tabBtn: '#tab-login' },
+      { selector: '#confirmPassword', tabindex: 34, section: 'login', panel: '#panel-login', tabBtn: '#tab-login' }
+    ];
+
+    // Function to activate a tab panel
+    function activateTabPanel(tabBtnSelector, panelSelector) {
+      // Hide all panels
+      $('.panel-section').hide().attr('aria-hidden', 'true');
+      
+      // Show target panel
+      $(panelSelector).show().attr('aria-hidden', 'false');
+      
+      // Update tab buttons
+      $('.tab-btn').removeClass('active').attr('aria-selected', 'false');
+      $(tabBtnSelector).addClass('active').attr('aria-selected', 'true');
+    }
+
+    // Function to get the actual focusable element (handles Selectize/Select2)
+    function getFocusableElement(field) {
+      var $el = $(field.selector);
+      if (!$el.length) return null;
+      
+      // Check if it's a Selectize field
+      if ($el[0] && $el[0].selectize) {
+        // For Selectize, focus the input inside the control
+        var selectize = $el[0].selectize;
+        if (selectize.$control && selectize.$control.length) {
+          var $input = selectize.$control.find('input');
+          if ($input.length) return $input[0];
+        }
+        return $el[0];
+      }
+      
+      // Check if it's a Select2 field
+      if ($el.hasClass('select2-hidden-accessible')) {
+        var $select2 = $el.next('.select2');
+        if ($select2.length) {
+          var $select2Input = $select2.find('.select2-selection');
+          if ($select2Input.length) return $select2Input[0];
+        }
+      }
+      
+      // Regular input/select
+      return $el[0];
+    }
+
+    // Function to focus a field
+    function focusField(field) {
+      var element = getFocusableElement(field);
+      if (!element) return false;
+      
+      // Activate tab panel if needed
+      if (field.panel && field.tabBtn) {
+        activateTabPanel(field.tabBtn, field.panel);
+        // Small delay to ensure panel is visible
+        setTimeout(function() {
+          try {
+            element.focus();
+            // For Selectize, also trigger open
+            var $el = $(field.selector);
+            if ($el[0] && $el[0].selectize) {
+              setTimeout(function() {
+                try { $el[0].selectize.open(); } catch(e) {}
+              }, 50);
+            }
+          } catch(e) {
+            console.warn('Focus failed for', field.selector, e);
+          }
+        }, 100);
+      } else {
+        try {
+          element.focus();
+          // For Selectize, also trigger open
+          var $el = $(field.selector);
+          if ($el[0] && $el[0].selectize) {
+            setTimeout(function() {
+              try { $el[0].selectize.open(); } catch(e) {}
+            }, 50);
+          }
+        } catch(e) {
+          console.warn('Focus failed for', field.selector, e);
+        }
+      }
+      
+      return true;
+    }
+
+    // Function to find current field index
+    function getCurrentFieldIndex() {
+      var activeElement = document.activeElement;
+      if (!activeElement) return -1;
+      
+      // Check if active element is inside a selectize/select2 control
+      var $active = $(activeElement);
+      var $closestSelect = $active.closest('.selectize-control, .select2-container');
+      
+      for (var i = 0; i < formFields.length; i++) {
+        var $field = $(formFields[i].selector);
+        if (!$field.length) continue;
+        
+        // Check if active element matches this field or is inside its control
+        if (activeElement === $field[0] || 
+            $field[0] === activeElement ||
+            ($closestSelect.length && $closestSelect.prev(formFields[i].selector).length) ||
+            ($closestSelect.length && $closestSelect.closest('.form-group').find(formFields[i].selector).length)) {
+          return i;
+        }
+      }
+      
+      return -1;
+    }
+
+    // Handle Tab key navigation
+    $(document).on('keydown', 'input, select, textarea', function(e) {
+      // Only handle Tab key (keyCode 9)
+      if (e.keyCode !== 9) return;
+      
+      var currentIndex = getCurrentFieldIndex();
+      if (currentIndex === -1) return;
+      
+      // If Shift+Tab (going backwards)
+      if (e.shiftKey) {
+        e.preventDefault();
+        var prevIndex = currentIndex - 1;
+        if (prevIndex < 0) prevIndex = formFields.length - 1; // Cycle to last
+        focusField(formFields[prevIndex]);
+        return false;
+      }
+      
+      // Regular Tab (going forwards)
+      // Check if we're at the last field
+      if (currentIndex === formFields.length - 1) {
+        e.preventDefault();
+        // Cycle back to first field
+        focusField(formFields[0]);
+        return false;
+      }
+      
+      // Normal forward navigation - let browser handle it, but ensure panel is activated
+      var nextIndex = currentIndex + 1;
+      if (nextIndex < formFields.length) {
+        var nextField = formFields[nextIndex];
+        if (nextField.panel && nextField.tabBtn) {
+          // Activate panel immediately
+          activateTabPanel(nextField.tabBtn, nextField.panel);
+        }
+      }
+    });
+
+    // Set tabindex attributes on all fields
+    formFields.forEach(function(field) {
+      var $el = $(field.selector);
+      if ($el.length) {
+        $el.attr('tabindex', field.tabindex);
+      }
+    });
+
+    // Auto-focus first field on page load
+    setTimeout(function() {
+      if (formFields.length > 0) {
+        focusField(formFields[0]);
+      }
+    }, 300); // Small delay to ensure Selectize/Select2 are initialized
+
+    // Also handle when user clicks on a field - ensure correct tab is active
+    formFields.forEach(function(field) {
+      $(field.selector).on('focus click', function() {
+        if (field.panel && field.tabBtn) {
+          activateTabPanel(field.tabBtn, field.panel);
+        }
+      });
+    });
+
+    // Expose utility function for manual navigation if needed
+    window.navigateToField = function(tabindex) {
+      var field = formFields.find(function(f) { return f.tabindex === tabindex; });
+      if (field) {
+        focusField(field);
+      }
+    };
+  });
+})(jQuery);
+</script>
+
+  <script>
+(function($){
+  var imageUrlServer = "{{ image_url|default:''|escapejs }}"; // server-provided initial image URL
+  var currentObjectUrl = null;
+
+  // cached jQuery refs (we will refresh $file when we replace it)
+  var $img = $('#imagePreview');
+  var $ph = $('#imagePlaceholder');
+  var $btnRemove = $('#btnRemoveImage');
+  var $btnChoose = $('#btnChooseImage');
+  var $deleteFlag = $('#id_delete_image');
+
+  // show server image (when available)
+  function showServerImage(){
+    if (imageUrlServer) {
+      $img.attr('src', imageUrlServer).show();
+      $ph.hide();
+      $btnRemove.show();
+      $deleteFlag.val("0");
+    } else {
+      showPlaceholder();
+    }
+  }
+
+  function showPlaceholder(){
+    // clear src and show placeholder
+    try { $img.attr('src','').hide(); } catch(e){}
+    $ph.show();
+    $btnRemove.hide();
+    $deleteFlag.val("0"); // leave as 0 unless explicit remove
+  }
+
+  // cleanup current object URL if any
+  function revokeCurrentObjectUrl(){
+    if (currentObjectUrl) {
+      try { URL.revokeObjectURL(currentObjectUrl); } catch(e) {}
+      currentObjectUrl = null;
+    }
+  }
+
+  // actual preview logic for a File object
+  function previewFile(file){
+    if (!file) {
+      // nothing selected -> show server image or placeholder depending on delete flag
+      if ($deleteFlag.val() !== "1" && imageUrlServer) {
+        showServerImage();
+      } else {
+        showPlaceholder();
+      }
+      return;
+    }
+
+    if (!file.type || !file.type.match('image.*')) {
+      showPlaceholder();
+      return;
+    }
+
+    revokeCurrentObjectUrl();
+
+    // try object URL
+    try {
+      var obj = URL.createObjectURL(file);
+      currentObjectUrl = obj;
+      $img.attr('src', obj).show();
+      $ph.hide();
+      $btnRemove.show();
+
+      // revoke after image loaded
+      $img.one('load.previewCleanup', function(){
+        try { URL.revokeObjectURL(obj); } catch(e){}
+        // only clear our reference if it still points to this obj
+        if (currentObjectUrl === obj) currentObjectUrl = null;
+      });
+    } catch (err) {
+      // fallback FileReader
+      var reader = new FileReader();
+      reader.onload = function(evt){
+        $img.attr('src', evt.target.result).show();
+        $ph.hide();
+        $btnRemove.show();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // new upload means don't mark delete flag
+    $deleteFlag.val("0");
+  }
+
+  // bind the "change" handler to the current file input
+  function bindFileInput(){
+    var $file = $('#id_image');
+
+    // Choose button triggers file picker
+    $btnChoose.off('click.choose').on('click.choose', function(e){
+      e.preventDefault();
+      $file.trigger('click');
+    });
+
+    // file change
+    $file.off('change.preview').on('change.preview', function(){
+      var f = (this.files && this.files[0]) ? this.files[0] : null;
+      previewFile(f);
+      // if you have a validation clearing helper, call it:
+      try { if (typeof clearValidationArtifactsFor === 'function') clearValidationArtifactsFor($file); } catch(e){}
+    });
+
+    return $file;
+  }
+
+  // remove handler: clears file input and shows placeholder; marks delete flag = 1
+  function setupRemove(){
+    $btnRemove.off('click.remove').on('click.remove', function(e){
+      e.preventDefault();
+
+      // revoke any object URL
+      revokeCurrentObjectUrl();
+
+      // clear file input reliably by replacing it with a fresh clone (no value)
+      var $old = $('#id_image');
+      var $new = $old.clone(false);  // clone attributes, no event handlers
+      $new.val(''); // ensure empty
+      $old.replaceWith($new);
+
+      // re-bind handlers to the new element
+      bindFileInput();
+
+      // show placeholder (and hide preview)
+      $img.hide();
+      $ph.show();
+      $btnRemove.hide();
+
+      // mark delete flag so server will remove stored image
+      $deleteFlag.val("1");
+
+      // optionally clear client-side validation
+      try { if (typeof clearValidationArtifactsFor === 'function') clearValidationArtifactsFor($new); } catch(e){}
+    });
+  }
+
+  // document ready
+  $(function(){
+    // initial UI state
+    if (imageUrlServer && imageUrlServer.length) {
+      showServerImage();
+    } else {
+      showPlaceholder();
+    }
+
+    // initial bind
+    bindFileInput();
+    setupRemove();
+  });
+
+})(jQuery);
+</script>
+
+
+
+<script>
+(function($){
+  $(function(){
+
+    // Prevent double-init if script included twice
+    if (window.__employee_entities_initialized) return;
+    window.__employee_entities_initialized = true;
+
+    // CSRF helper (Django)
+    function getCookie(name) {
+      var cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+          var cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    var CSRF_TOKEN = getCookie('csrftoken');
+
+    // Replace these Django URL tags as needed
+    var urls = {
+      listPosition:   "{% url 'employee:list_positions_ajax' %}",
+      createPosition: "{% url 'employee:create_position_ajax' %}",
+      updatePosition: "{% url 'employee:update_position_ajax' %}",
+      listDepartment:   "{% url 'employee:list_departments_ajax' %}",
+      createDepartment: "{% url 'employee:create_department_ajax' %}",
+      updateDepartment: "{% url 'employee:update_department_ajax' %}",
+      listMaritalStatus: "{% url 'employee:list_marital_status_ajax' %}",
+      createMaritalStatus: "{% url 'employee:create_marital_status_ajax' %}",
+      updateMaritalStatus: "{% url 'employee:update_marital_status_ajax' %}"
+    };
+
+    // small debounce util
+    function debounce(fn, wait){
+      var t;
+      return function(){
+        var ctx = this, args = arguments;
+        clearTimeout(t);
+        t = setTimeout(function(){ fn.apply(ctx, args); }, wait || 250);
+      };
+    }
+
+    // modal helper (bootstrap3/4/5 compatibility)
+    var modalInstances = {};
+    function showModal(selector) {
+      var $el = $(selector);
+      if (!$el.length) { console.warn('Modal element not found:', selector); return; }
+      if (window.bootstrap && typeof window.bootstrap.Modal === 'function') {
+        if (!modalInstances[selector]) {
+          modalInstances[selector] = new window.bootstrap.Modal($el[0], { backdrop: 'static', keyboard: true });
+        }
+        modalInstances[selector].show();
+        return;
+      }
+      if ($.fn && typeof $.fn.modal === 'function') {
+        try { $el.modal('show'); return; } catch(e){ console.warn(e); }
+      }
+      alert('Please open the modal manually (programmatic open unavailable).');
+    }
+
+    // selectize helpers (if present)
+    function getSelectizeInst($select) {
+      if (!$select || !$select.length) return null;
+      try { return ($select[0] && $select[0].selectize) ? $select[0].selectize : null; } catch(e){ return null; }
+    }
+    function clearSelectValue($select) {
+      if (!$select || !$select.length) return;
+      var inst = getSelectizeInst($select);
+      try {
+        if (inst) { inst.clear(); inst.close(); setTimeout(function(){ try{ inst.focus(); }catch(e){} }, 8); }
+        $select.val('').trigger('change');
+      } catch(e){
+        try { $select.val(''); $select.trigger('change'); } catch(_) {}
+      }
+    }
+    function initSelectizeIfNeeded(selector, placeholder) {
+      var $s = $(selector);
+      if (!$s.length) return null;
+      if (!$.fn || typeof $.fn.selectize !== 'function') return null;
+      if ($s.data('selectize')) return getSelectizeInst($s);
+      try {
+        var inst = $s.selectize({
+          create: false,
+          allowEmptyOption: true,
+          placeholder: placeholder || ($s.find('option[value=""]').first().text() || ''),
+          plugins: ['clear_button'],
+          onChange: function(val) { $s.trigger('change'); }
+        })[0].selectize;
+        return inst;
+      } catch(e){ console.warn('Selectize init failed for', selector, e); return null; }
+    }
+
+    // --- DOM helpers ---
+    // makeRow now sets data-entity attribute and uses provided onEdit callback only
+    function makeRow(item, entityName, onEdit){
+      var $row = $('<div class="list-row d-flex"></div>');
+      $row.attr('data-id', String(item.id));
+      $row.attr('data-name', item.name || '');
+      $row.attr('data-code', item.code || '');
+      if (entityName) $row.attr('data-entity', entityName);
+
+      var $left = $('<div class="d-flex flex-column list-left" style="flex:1 1 auto;"></div>');
+      $left.append($('<div class="title"></div>').text(item.name));
+      $left.append($('<small class="meta"></small>').text(item.code ? ('Code: ' + item.code) : ''));
+
+      var $actions = $('<div class="list-actions" style="flex:0 0 auto; margin-left:12px;"></div>');
+      var $editBtn = $('<button type="button" class="btn btn-sm btn-link text-primary" title="Edit"><i class="fa fa-edit"></i></button>');
+
+      // wire edit to provided onEdit (module-specific) — avoid global lookup ambiguity
+      $editBtn.on('click.entity', function(e){
+        e.preventDefault();
+        var id = $row.attr('data-id');
+        var name = $row.attr('data-name') || $row.find('.title').text() || '';
+        var code = $row.attr('data-code') || $row.find('.meta').text().replace(/^Code:\s*/, '') || '';
+        if (typeof onEdit === 'function') {
+          try { onEdit({ id: id, name: name, code: code, entity: entityName }); }
+          catch(ex) { console.warn('onEdit callback failed', ex); }
+        } else {
+          // fallback: trigger global event with entity meta so global handlers can disambiguate
+          $(document).trigger('entity:edit', [{ id: id, name: name, code: code, entity: entityName }]);
+        }
+      });
+
+      $actions.append($editBtn);
+      $row.append($left).append($actions);
+      return $row;
+    }
+
+    function addOrUpdateOption($select, id, text){
+      if (!$select || !$select.length) return;
+      var val = String(id);
+      var existing = $select.find('option[value="' + val + '"]');
+      if (existing.length) {
+        existing.text(text);
+      } else {
+        // prepend so it's visible
+        $select.prepend(new Option(text, val, true, true));
+      }
+      try {
+        var s = getSelectizeInst($select);
+        if (s) {
+          if (s.options[val]) s.updateOption(val, { value: val, text: text });
+          else s.addOption({ value: val, text: text });
+          s.setValue(val);
+          setTimeout(function(){ s.focus(); }, 20);
+        } else {
+          $select.val(val).trigger('change');
+          setTimeout(function(){ $select.focus(); }, 20);
+        }
+      } catch(e){
+        $select.val(val).trigger('change');
+      }
+    }
+
+    // upsertRow now accepts module-specific onEdit and entityName to avoid global-id collisions
+    function findRow($list, id) { return $list.find('.list-row[data-id="' + String(id) + '"]'); }
+
+    function upsertRow($list, item, opts, onEdit, entityName) {
+      opts = opts || {};
+      var $existing = findRow($list, item.id);
+      if ($existing.length) {
+        var st = $list.scrollTop();
+        $existing.find('.title').first().text(item.name);
+        $existing.find('.meta').first().text(item.code ? ('Code: ' + item.code) : '');
+        $existing.attr('data-name', item.name || '');
+        $existing.attr('data-code', item.code || '');
+        if (entityName) $existing.attr('data-entity', entityName);
+        $list.scrollTop(st);
+        return { updated: true, added: false };
+      } else {
+        var $row = makeRow(item, entityName, onEdit);
+        var previousScroll = $list.scrollTop();
+        $list.prepend($row);
+        try {
+          var $countNode = $($list.data('count-node'));
+          if ($countNode && $countNode.length) {
+            var cur = parseInt($countNode.text(),10) || $list.find('.list-row').length;
+            $countNode.text(cur + 1);
+          }
+        } catch(e){}
+        if (opts.showAtTop) $list.animate({ scrollTop: 0 }, 160);
+        else $list.scrollTop(previousScroll);
+        return { updated: false, added: true };
+      }
+    }
+
+    function prettyTypeFrom(inputSelector) {
+      var m = inputSelector.match(/create_([a-zA-Z_]+)_name/);
+      if (m && m[1]) {
+        var t = m[1].replace(/_/g,' ');
+        return t.charAt(0).toUpperCase() + t.slice(1);
+      }
+      return 'Item';
+    }
+
+    // --- generic entity module factory ---
+    function makeEntityModule(cfg){
+      var entityName = cfg.entityName || (cfg.nameInput || '').replace(/^#?create_?/,'').split('_')[0] || ''; // fallback
+      var $select = $(cfg.select);
+      var $list = $(cfg.listArea);
+      if (cfg.listCount) $list.data('count-node', cfg.listCount);
+      var $count = $(cfg.listCount);
+      var urlsLocal = cfg.urls;
+      var $search = $(cfg.search);
+      var $modal = $(cfg.modal);
+      var $form = $(cfg.form);
+      var $id = $(cfg.idInput), $name = $(cfg.nameInput), $code = $(cfg.codeInput);
+      var $createBtn = $(cfg.createBtn), $updateBtn = $(cfg.updateBtn), $cancelBtn = $(cfg.cancelBtn);
+      var nonfield = cfg.nonfield;
+      var prettyType = prettyTypeFrom(cfg.nameInput);
+
+      // simple state
+      var submitting = false;
+
+      // field error helpers with auto-hide
+      function showFieldError(inputSelector, msg) {
+        try {
+          var errId = inputSelector.replace('#','') + '_error';
+          var $err = $('#' + errId);
+          var $input = $(inputSelector);
+          if (!$err.length) return;
+          clearTimeout($err.data('hideTimeout'));
+          $err.removeClass('d-none').text(msg || '');
+          $input.addClass('is-invalid');
+          var t = setTimeout(function(){
+            try { $err.addClass('d-none').text(''); $input.removeClass('is-invalid'); } catch(e){}
+          }, 3000);
+          $err.data('hideTimeout', t);
+        } catch(e){ console.warn('showFieldError error', e); }
+      }
+      function clearFieldError(inputSelector) {
+        try {
+          var errId = inputSelector.replace('#','') + '_error';
+          var $err = $('#' + errId);
+          var $input = $(inputSelector);
+          if (!$err.length) return;
+          clearTimeout($err.data('hideTimeout'));
+          $err.addClass('d-none').text('');
+          $input.removeClass('is-invalid');
+        } catch(e){ console.warn('clearFieldError error', e); }
+      }
+
+      // non-field messages
+      function showNonField(msg, type){
+        var $n = $(nonfield);
+        if (!$n || !$n.length) return;
+        $n.removeClass('d-none alert-success alert-danger alert-info')
+          .addClass('alert alert-' + (type || 'info'))
+          .text(msg || '');
+        if (type === 'success') {
+          clearTimeout($n.data('hideTimeout'));
+          var t = setTimeout(function(){
+            try { $n.addClass('d-none').removeClass('alert alert-success alert-danger alert-info').text(''); } catch(e){}
+          }, 3000);
+          $n.data('hideTimeout', t);
+        }
+      }
+      function clearNonField(){
+        var $n = $(nonfield);
+        if (!$n || !$n.length) return;
+        clearTimeout($n.data('hideTimeout'));
+        $n.addClass('d-none').removeClass('alert alert-success alert-danger alert-info').text('');
+      }
+
+      function setLoading(){
+        if (!$list.length) return;
+        $list.empty().append('<div class="list-empty text-center text-muted py-3">Loading…</div>');
+        if ($count && $count.length) $count.text('0');
+      }
+
+      function renderList(items){
+        if (!$list.length) return;
+        $list.empty();
+        if (!items || items.length === 0) {
+          $list.append('<div class="list-empty text-center text-muted py-3">No items found</div>');
+          if ($count && $count.length) $count.text('0');
+          return;
+        }
+        if ($count && $count.length) $count.text(items.length);
+        items.forEach(function(it){
+          $list.append(makeRow(it, entityName, startEdit));
+        });
+      }
+
+      function loadList(q){
+        if (!$list.length) return;
+        setLoading();
+        var u = urlsLocal.list + (q ? ('?q=' + encodeURIComponent(q)) : '');
+        fetch(u, { credentials: 'same-origin' })
+          .then(function(res){ return res.json(); })
+          .then(function(json){
+            if (json && Array.isArray(json.items)) renderList(json.items);
+            else $list.html('<div class="list-empty text-center text-danger py-3">Unable to load</div>');
+          })
+          .catch(function(){ $list.html('<div class="list-empty text-center text-danger py-3">Failed to load</div>'); });
+      }
+
+      function resetForm(){
+        $id.val('');
+        $name.val('');
+        $code.val('');
+        clearFieldError(cfg.nameInput);
+        clearFieldError(cfg.codeInput);
+        clearNonField();
+        $cancelBtn.addClass('d-none');
+        $updateBtn.addClass('d-none');
+        $createBtn.removeClass('d-none');
+        submitting = false;
+        $createBtn.prop('disabled', false);
+        $updateBtn.prop('disabled', false);
+        $form.removeData('submitting');
+      }
+
+      function startEdit(item){
+        $id.val(item.id);
+        $name.val(item.name);
+        $code.val(item.code || '');
+        $cancelBtn.removeClass('d-none');
+        $updateBtn.removeClass('d-none');
+        $createBtn.addClass('d-none');
+        setTimeout(function(){ $name.trigger('focus'); }, 40);
+      }
+
+      // doSubmit uses module-specific startEdit when upserting
+      async function doSubmit(mode){
+        if (submitting || $form.data('submitting')) return;
+        submitting = true;
+        $form.data('submitting', true);
+
+        clearFieldError(cfg.nameInput);
+        clearFieldError(cfg.codeInput);
+        clearNonField();
+
+        var nameVal = ($name.val() || '').trim();
+        var codeVal = ($code.val() || '').trim();
+
+        if (!nameVal) { showFieldError(cfg.nameInput, 'Please enter a name.'); $name.trigger('focus'); submitting=false; $form.removeData('submitting'); return; }
+
+        $createBtn.prop('disabled', true);
+        $updateBtn.prop('disabled', true);
+
+        var clientToken = $form.data('client-token') || (Math.random().toString(36).slice(2));
+        $form.data('client-token', clientToken);
+
+        var fd = new FormData();
+        fd.append('name', nameVal);
+        fd.append('code', codeVal);
+        if (mode === 'update' && $id.val()) fd.append('id', $id.val());
+
+        var url = (mode === 'update' && $id.val()) ? urlsLocal.update : urlsLocal.create;
+
+        try {
+          var headers = { 'X-CSRFToken': CSRF_TOKEN, 'X-Client-Token': clientToken, 'X-Requested-With': 'XMLHttpRequest' };
+          var res = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: headers, body: fd });
+          var text = await res.text();
+          var json = null;
+          try { json = JSON.parse(text || '{}'); } catch(e){ json = null; }
+
+          if (res.status === 200 || res.status === 201) {
+            var resp = json || {};
+            if (resp && resp.success) {
+              var createdFlag = (typeof resp.created !== 'undefined') ? resp.created : true;
+
+              if (!createdFlag) {
+                var existMsg = prettyType + ' "' + (resp.name || nameVal) + '" already exists.';
+                showFieldError(cfg.nameInput, prettyType + ' already exists.');
+                showNonField(existMsg, 'danger');
+
+                if (resp.id) {
+                  try { addOrUpdateOption($select, resp.id, resp.name || nameVal); } catch(e){}
+                  try { upsertRow($list, { id: resp.id, name: resp.name || nameVal, code: resp.code || codeVal || '' }, { showAtTop: false }, startEdit, entityName); } catch(e){}
+                }
+                return resp;
+              }
+
+              var item = { id: resp.id, name: resp.name, code: resp.code || codeVal || '' };
+
+              if (mode === 'update') upsertRow($list, item, { showAtTop: false }, startEdit, entityName);
+              else upsertRow($list, item, { showAtTop: true }, startEdit, entityName);
+
+              addOrUpdateOption($select, resp.id, resp.name);
+
+              resetForm();
+              showNonField((mode === 'update' ? 'Updated' : 'Created') + ' successfully.', 'success');
+
+              try {
+                var s = getSelectizeInst($select);
+                if (s) { s.setValue(String(resp.id)); setTimeout(function(){ s.focus(); }, 30); }
+                else { $select.val(String(resp.id)).trigger('change'); setTimeout(function(){ $select.focus(); }, 30); }
+              } catch(e){}
+              return resp;
+            } else {
+              showNonField('Unexpected server response.', 'danger');
+              return;
+            }
+          } else if (res.status === 400) {
+            if (json && json.errors) {
+              if (json.errors.name) showFieldError(cfg.nameInput, json.errors.name);
+              if (json.errors.code) showFieldError(cfg.codeInput, json.errors.code);
+              if (json.errors.__all__ || json.errors.non_field_errors) showNonField(json.errors.__all__ || json.errors.non_field_errors, 'danger');
+            } else {
+              showNonField('Validation failed (400).', 'danger');
+            }
+            return;
+          } else {
+            showNonField('Server error: ' + res.status, 'danger');
+            return;
+          }
+        } catch(err) {
+          console.warn('create/update error', err);
+          showNonField('Network or server error occurred.', 'danger');
+          return;
+        } finally {
+          submitting = false;
+          $form.removeData('submitting');
+          $createBtn.prop('disabled', false);
+          $updateBtn.prop('disabled', false);
+        }
+      }
+
+      // wire buttons (namespaced)
+      $createBtn.off('.entity').on('click.entity', function(e){ e.preventDefault(); doSubmit('create'); });
+      $updateBtn.off('.entity').on('click.entity', function(e){ e.preventDefault(); doSubmit('update'); });
+      $cancelBtn.off('.entity').on('click.entity', function(e){ e.preventDefault(); resetForm(); });
+
+      // prevent default form submit
+      $form.off('.entity').on('submit.entity', function(e){ e.preventDefault(); var mode = ($id.val() && $id.val().length) ? 'update' : 'create'; doSubmit(mode); });
+
+      // when modal shows: reset and load list
+      $modal.off('.entity').on('show.bs.modal.entity', function(){
+        resetForm();
+        $form.data('client-token', Math.random().toString(36).slice(2));
+        setTimeout(function(){ $search.trigger('focus'); }, 120);
+        loadList('');
+      });
+
+      // search wiring (debounced)
+      $search.off('.entity').on('input.entity', debounce(function(){ loadList($search.val() || ''); }, 200));
+
+      return { loadList: loadList, startEdit: startEdit, resetForm: resetForm, entityName: entityName };
+    } // makeEntityModule end
+
+    // create instances
+    var positionModule = makeEntityModule({
+      entityName: 'position',
+      select: '#position',
+      listArea: '#positionList',
+      listCount: '#positionListCount',
+      search: '#positionListSearch',
+      modal: '#modalCreatePosition',
+      form: '#formCreatePosition',
+      idInput: '#create_position_id',
+      nameInput: '#create_position_name',
+      codeInput: '#create_position_code',
+      createBtn: '#createPositionBtn',
+      updateBtn: '#updatePositionBtn',
+      cancelBtn: '#positionCancelEditBtn',
+      nonfield: '#create_position_nonfield',
+      urls: { list: urls.listPosition, create: urls.createPosition, update: urls.updatePosition }
+    });
+
+    var departmentModule = makeEntityModule({
+      entityName: 'department',
+      select: '#department',
+      listArea: '#departmentList',
+      listCount: '#departmentListCount',
+      search: '#departmentListSearch',
+      modal: '#modalCreateDepartment',
+      form: '#formCreateDepartment',
+      idInput: '#create_department_id',
+      nameInput: '#create_department_name',
+      codeInput: '#create_department_code',
+      createBtn: '#createDepartmentBtn',
+      updateBtn: '#updateDepartmentBtn',
+      cancelBtn: '#departmentCancelEditBtn',
+      nonfield: '#create_department_nonfield',
+      urls: { list: urls.listDepartment, create: urls.createDepartment, update: urls.updateDepartment }
+    });
+
+    var maritalStatusModule = makeEntityModule({
+      entityName: 'marital_status',
+      select: '#maritalStatus',
+      listArea: '#maritalStatusList',
+      listCount: '#maritalStatusListCount',
+      search: '#maritalStatusListSearch',
+      modal: '#modalCreateMaritalStatus',
+      form: '#formCreateMaritalStatus',
+      idInput: '#create_marital_status_id',
+      nameInput: '#create_marital_status_name',
+      codeInput: '#create_marital_status_code',
+      createBtn: '#createMaritalStatusBtn',
+      updateBtn: '#updateMaritalStatusBtn',
+      cancelBtn: '#maritalStatusCancelEditBtn',
+      nonfield: '#create_marital_status_nonfield',
+      urls: { list: urls.listMaritalStatus, create: urls.createMaritalStatus, update: urls.updateMaritalStatus }
+    });
+
+    // expose map for backwards compat
+    var MODULES_BY_ENTITY = {
+      position: positionModule,
+      department: departmentModule,
+      marital_status: maritalStatusModule
+    };
+
+    // ---------- Selectize init (if present) ----------
+    var posInst = initSelectizeIfNeeded('#position', 'Select position');
+    var depInst = initSelectizeIfNeeded('#department', 'Select department');
+    var maritalInst = initSelectizeIfNeeded('#marital_status', 'Select marital status');
+
+    // ---------- intercept selectize 'create...' sentinel clicks ----------
+    $(document).off('.entity').on('mousedown.entity touchstart.entity click.entity', '.selectize-dropdown .option[data-value^="__create_"]', function(e){
+      e.preventDefault(); e.stopImmediatePropagation();
+      var sentinel = $(this).attr('data-value') || '';
+      if (sentinel.indexOf('__create_position') === 0) { showModal('#modalCreatePosition'); try{ if (posInst){ posInst.clear(); posInst.close(); posInst.focus(); } }catch(_){} $('select').filter(function(){ return $(this).find('option[value="__create_position__"]').length; }).each(function(){ $(this).val(''); $(this).trigger('change'); }); }
+      if (sentinel.indexOf('__create_department') === 0) { showModal('#modalCreateDepartment'); try{ if (depInst){ depInst.clear(); depInst.close(); depInst.focus(); } }catch(_){} $('select').filter(function(){ return $(this).find('option[value="__create_department__"]').length; }).each(function(){ $(this).val(''); $(this).trigger('change'); }); }
+      if (sentinel.indexOf('__create_marital_status') === 0) { showModal('#modalCreateMaritalStatus'); try{ if (maritalInst){ maritalInst.clear(); maritalInst.close(); maritalInst.focus(); } }catch(_){} $('select').filter(function(){ return $(this).find('option[value="__create_marital_status__"]').length; }).each(function(){ $(this).val(''); $(this).trigger('change'); }); }
+      return false;
+    });
+
+    // native select fallback
+    $(document).off('change.entity').on('change.entity', '#position', function(){
+      var v = $(this).val();
+      if (v === '__create_position__') { showModal('#modalCreatePosition'); setTimeout(function(){ clearSelectValue($('#position')); }, 8); }
+    });
+    $(document).off('change.entity').on('change.entity', '#department', function(){
+      var v = $(this).val();
+      if (v === '__create_department__') { showModal('#modalCreateDepartment'); setTimeout(function(){ clearSelectValue($('#department')); }, 8); }
+    });
+    $(document).off('change.entity').on('change.entity', '#marital_status', function(){
+      var v = $(this).val();
+      if (v === '__create_marital_status__') { showModal('#modalCreateMaritalStatus'); setTimeout(function(){ clearSelectValue($('#marital_status')); }, 8); }
+    });
+
+    // keyboard support for selects/selectize (Enter/Space/Tab)
+    $(document).off('keydown.entity').on('keydown.entity', function(e){
+      var isEnter = (e.key === 'Enter' || e.keyCode === 13);
+      var isSpace = (e.key === ' ' || e.key === 'Spacebar' || e.keyCode === 32);
+      var isTab = (e.key === 'Tab' || e.keyCode === 9);
+      if (!isEnter && !isSpace && !isTab) return;
+      var $active = $(document.activeElement);
+
+      // native select
+      if ($active.is('select')) {
+        var val = $active.val();
+        if (val === '__create_position__') { e.preventDefault(); showModal('#modalCreatePosition'); clearSelectValue($active); return; }
+        if (val === '__create_department__') { e.preventDefault(); showModal('#modalCreateDepartment'); clearSelectValue($active); return; }
+        if (val === '__create_marital_status__') { e.preventDefault(); showModal('#modalCreateMaritalStatus'); clearSelectValue($active); return; }
+      }
+
+      // selectize control
+      var $ctrl = $active.closest('.selectize-control');
+      if ($ctrl.length) {
+        var $dropdown = $ctrl.find('.selectize-dropdown');
+        var $highlight = $dropdown.find('.option.active, .option.highlighted').first();
+        var hVal = $highlight.length ? $highlight.attr('data-value') : null;
+        var $origSelect = $ctrl.prev('select');
+        var origVal = $origSelect.length ? $origSelect.val() : null;
+        if (hVal === '__create_position__' || origVal === '__create_position__') { e.preventDefault(); showModal('#modalCreatePosition'); try { if (posInst) { posInst.clear(); posInst.close(); posInst.focus(); } } catch(_) {} if ($origSelect.length) clearSelectValue($origSelect); return; }
+        if (hVal === '__create_department__' || origVal === '__create_department__') { e.preventDefault(); showModal('#modalCreateDepartment'); try { if (depInst) { depInst.clear(); depInst.close(); depInst.focus(); } } catch(_) {} if ($origSelect.length) clearSelectValue($origSelect); return; }
+        if (hVal === '__create_marital_status__' || origVal === '__create_marital_status__') { e.preventDefault(); showModal('#modalCreateMaritalStatus'); try { if (maritalInst) { maritalInst.clear(); maritalInst.close(); maritalInst.focus(); } } catch(_) {} if ($origSelect.length) clearSelectValue($origSelect); return; }
+      }
+
+      var $inDropdown = $active.closest('.selectize-dropdown');
+      if ($inDropdown.length) {
+        var $h = $inDropdown.find('.option.active, .option.highlighted').first();
+        var valh = $h.length ? $h.attr('data-value') : null;
+        if (valh === '__create_position__') { e.preventDefault(); showModal('#modalCreatePosition'); clearSelectValue($('#position')); return; }
+        if (valh === '__create_department__') { e.preventDefault(); showModal('#modalCreateDepartment'); clearSelectValue($('#department')); return; }
+        if (valh === '__create_marital_status__') { e.preventDefault(); showModal('#modalCreateMaritalStatus'); clearSelectValue($('#marital_status')); return; }
+      }
+    });
+
+    // modal focus UX
+    $(document).off('shown.bs.modal.entity').on('shown.bs.modal.entity', '#modalCreatePosition', function(){ $('#create_position_name').trigger('focus'); });
+    $(document).off('shown.bs.modal.entity').on('shown.bs.modal.entity', '#modalCreateDepartment', function(){ $('#create_department_name').trigger('focus'); });
+    $(document).off('shown.bs.modal.entity').on('shown.bs.modal.entity', '#modalCreateMaritalStatus', function(){ $('#create_marital_status_name').trigger('focus'); });
+
+    // reinit helper for selectize
+    window.reinitPositionDepartmentSelectize = function() {
+      try { posInst = initSelectizeIfNeeded('#position', 'Select position'); } catch(e) { console.warn(e); }
+      try { depInst = initSelectizeIfNeeded('#department', 'Select department'); } catch(e) { console.warn(e); }
+      try { maritalInst = initSelectizeIfNeeded('#marital_status', 'Select marital status'); } catch(e) { console.warn(e); }
+    };
+
+    // global entity:edit listener (backwards-compatible).
+    // If event payload contains 'entity', we map it directly to the right module.
+    $(document).off('entity:edit.entity').on('entity:edit.entity', function(e, item){
+      try {
+        if (!item) return;
+        // If entity provided and module exists, call module.startEdit and show modal
+        if (item.entity && MODULES_BY_ENTITY[item.entity]) {
+          var mod = MODULES_BY_ENTITY[item.entity];
+          try { mod.startEdit(item); } catch(_) {}
+          // open proper modal
+          if (item.entity === 'position') showModal('#modalCreatePosition');
+          else if (item.entity === 'department') showModal('#modalCreateDepartment');
+          else if (item.entity === 'marital_status') showModal('#modalCreateMaritalStatus');
+          return;
+        }
+        // fallback: older behavior — try to detect from DOM rows
+        if ($('#positionList').find('.list-row[data-id="'+String(item.id)+'"]').length) {
+          var $r = $('#positionList').find('.list-row[data-id="'+String(item.id)+'"]').first();
+          var cur = { id: $r.attr('data-id'), name: $r.attr('data-name') || $r.find('.title').text(), code: $r.attr('data-code') || $r.find('.meta').text().replace(/^Code:\s*/, '') };
+          positionModule.startEdit(cur);
+          showModal('#modalCreatePosition');
+          return;
+        }
+        if ($('#departmentList').find('.list-row[data-id="'+String(item.id)+'"]').length) {
+          var $r2 = $('#departmentList').find('.list-row[data-id="'+String(item.id)+'"]').first();
+          var cur2 = { id: $r2.attr('data-id'), name: $r2.attr('data-name') || $r2.find('.title').text(), code: $r2.attr('data-code') || $r2.find('.meta').text().replace(/^Code:\s*/, '') };
+          departmentModule.startEdit(cur2);
+          showModal('#modalCreateDepartment');
+          return;
+        }
+        if ($('#maritalStatusList').find('.list-row[data-id="'+String(item.id)+'"]').length) {
+          var $r3 = $('#maritalStatusList').find('.list-row[data-id="'+String(item.id)+'"]').first();
+          var cur3 = { id: $r3.attr('data-id'), name: $r3.attr('data-name') || $r3.find('.title').text(), code: $r3.attr('data-code') || $r3.find('.meta').text().replace(/^Code:\s*/, '') };
+          maritalStatusModule.startEdit(cur3);
+          showModal('#modalCreateMaritalStatus');
+          return;
+        }
+      } catch(e) { console.warn('entity:edit handler', e); }
+    });
+
+    // --- initial list loads (avoid permanent "Loading…") ---
+    setTimeout(function(){
+      try { positionModule.loadList(''); } catch(e){}
+      try { departmentModule.loadList(''); } catch(e){}
+      try { maritalStatusModule.loadList(''); } catch(e){}
+    }, 20);
+
+    // expose modules for debugging if needed
+    window._employeeModules = MODULES_BY_ENTITY;
+
+  }); // ready
+})(jQuery);
+</script>
+
+
+
+
+{# Employee create success modal #}
+<div class="modal fade" id="employeeSuccessModal"  role="dialog" aria-labelledby="employeeSuccessModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="employeeSuccessModalLabel">Employee Created successfully</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+
+        {% if created_employee_name %}
+          <div class="mt-2"><strong>Employee:</strong> {{ created_employee_name }}</div>
+        {% endif %}
+      </div>
+
+      <div class="modal-footer">
+        <a href="{% url 'employee:employee_list' %}" class="btn btn-secondary" id="employeeSuccessBack">Go to Employee List</a>
+
+        {# Optional: show link to edit/view employee if view supplies created_employee_pk #}
+        {% if created_employee_pk %}
+          <a href="{% url 'employee:employee_edit' created_employee_pk %}" class="btn btn-outline-primary" id="employeeSuccessView">View Employee</a>
+        {% endif %}
+
+        <button type="button" class="btn btn-primary" data-dismiss="modal" id="employeeSuccessOk">Okay</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{# Show the modal only when view sets show_success_modal (GET after redirect) #}
+{% if show_success_modal %}
+<script>
+(function($){
+  $(function(){
+    // small helper to remove query params (URL API preferred, fallback to regex)
+    function removeQueryParams(names) {
+      try {
+        if (window.history && window.history.replaceState && typeof URL === 'function') {
+          var url = new URL(window.location.href);
+          names.forEach(function(p){ url.searchParams.delete(p); });
+          var newSearch = url.searchParams.toString();
+          var newUrl = url.pathname + (newSearch ? ('?' + newSearch) : '') + (url.hash || '');
+          window.history.replaceState({}, document.title, newUrl);
+          return;
+        }
+      } catch (err) {
+        // continue to fallback
+      }
+
+      // fallback: naive removal (keeps other params)
+      try {
+        var href = window.location.href;
+        names.forEach(function(p){
+          var re = new RegExp('([?&])' + p + '=[^&]*(&|$)', 'i');
+          href = href.replace(re, function(m,g1,g2){ return g2 === '&' ? g1 : ''; });
+        });
+        href = href.replace(/[?&]$/, '');
+        try { window.history.replaceState({}, document.title, href); } catch(e) { /* ignore */ }
+      } catch (err) { /* ignore */ }
+    }
+
+    // show modal once on page load
+    setTimeout(function(){
+      try {
+        if ($.fn.modal) {
+          $('#employeeSuccessModal').modal({ backdrop: 'static', keyboard: true, show: true });
+        } else {
+          $('#employeeSuccessModal').modal('show');
+        }
+      } catch (e) {
+        try { $('#employeeSuccessModal').modal('show'); } catch (ee) { console.warn('Modal show failed', ee); }
+      }
+
+      // remove potential trigger params so refresh won't re-open modal
+      removeQueryParams(['created', 'employee_name', 'emp_created']);
+    }, 80);
+
+    // focus the OK button for keyboard users
+    $('#employeeSuccessModal').on('shown.bs.modal', function () {
+      try { $('#employeeSuccessOk').focus(); } catch (e) {}
+    });
+  });
+})(jQuery);
+</script>
+{% endif %}
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const lcoSelectEl = document.getElementById("id_lco");
+    const branchSelectEl = document.getElementById("branch");
+    const allowbranchEl = document.getElementById("allowed_branches");
+
+    if (!lcoSelectEl || !branchSelectEl) {
+      console.warn("Dropdowns not found");
+      return;
+    }
+
+    // Get Selectize instances
+    const lcoSelectize = lcoSelectEl.selectize;
+    const branchSelectize = branchSelectEl.selectize;
+    const allowbranchSelectize = allowbranchEl.selectize;
+
+    if (!lcoSelectize || !branchSelectize) {
+      console.warn("Selectize not initialized");
+      return;
+    }
+
+    // Listen for change on the LCO selectize dropdown
+    lcoSelectize.on("change", function (lcoId) {
+      // console.log("LCO changed:", lcoId);
+
+      // Clear previous branch options
+      branchSelectize.disable();
+      branchSelectize.clearOptions();
+      branchSelectize.clear();
+
+      // Clear previous allowed branch options
+      allowbranchSelectize.disable();
+      allowbranchSelectize.clearOptions();
+      allowbranchSelectize.clear();
+
+      if (!lcoId) return;
+
+      fetch(`/employe/api/branches/?lco_id=${lcoId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            data.forEach(branch => {
+              branchSelectize.addOption({ value: branch.id, text: branch.name });
+              allowbranchSelectize.addOption({ value: branch.id, text: branch.name });
+            });
+
+            branchSelectize.enable();
+            branchSelectize.refreshOptions(false);
+            allowbranchSelectize.enable();
+            allowbranchSelectize.refreshOptions(false);
+
+          } else {
+            console.warn("Invalid response format:", data);
+          }
+        })
+        .catch(err => {
+          console.error("Error loading branches:", err);
+        });
+    });
+  });
+</script>
+
+
+
+
+<script>
+(function($) {
+  $(function() {
+    var $form = $('#employeeForm');
+    if (!$form.length) { console.error('employeeForm not found'); return; }
+
+    var $email = $('#email'), $employeeId = $('#employeeId');
+    var $file = $('#employee-image-upload');
+    var $previewImg = $('#previewImg');
+    var $avatarText = $('#avatarText');
+    var $removeBtn = $('#removeImageBtn');
+
+    var checkEmailUrl = window.CHECK_EMAIL_URL || null;
+    var checkEmployeeIdUrl = window.CHECK_EMPLOYEE_ID_URL || null;
+
+    // ---------- CSRF Helper ----------
+    function getCookie(name) {
+      var cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+          var cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    var csrftoken = getCookie('csrftoken');
+
+    function safeLog() {
+      if (window.console) console.log.apply(console, arguments);
+    }
+
+    // ---------- Select2 (Only for multi-select) ----------
+    
+
+    function destroySelect2($s) {
+      if (!$.fn || !$.fn.select2) return;
+      if ($s.data('select2')) {
+        try { $s.select2('destroy'); } catch(e){}
+      }
+    }
+
+    // $form.find('select[multiple]').each(function() {
+    //   initSelect2($(this));
+    // });
+
+    // ---------- Tabs ----------
+    function activateTab(tabBtn) {
+      var id = $(tabBtn).attr('id');
+      if (!id) return;
+      var panelId = id.replace(/^tab-/, 'panel-');
+      $('.panel-section').hide().attr('aria-hidden', 'true');
+      $('#' + panelId).show().attr('aria-hidden', 'false');
+      $('.tab-btn').removeClass('active').attr('aria-selected', 'false');
+      $(tabBtn).addClass('active').attr('aria-selected', 'true');
+    }
+
+    $(document).on('click', '.tab-btn', function(e) {
+      e.preventDefault();
+      activateTab(this);
+    });
+
+    (function() {
+      var $initial = $('.tab-btn.active').first();
+      if ($initial.length) activateTab($initial);
+      else activateTab($('.tab-btn').first());
+    })();
+
+    // ---------- Image preview ----------
+    function resetAvatarPreview() {
+      try { $file.val(''); if ($file.prop('files')) $file[0].value = null; } catch(e){}
+      if ($previewImg.length) $previewImg.attr('src', '').addClass('hidden');
+      if ($avatarText.length) $avatarText.show();
+    }
+
+    if ($file.length) {
+      $file.on('change', function() {
+        var f = this.files && this.files[0];
+        if (!f) { resetAvatarPreview(); return; }
+
+        var ext = (f.name || '').toLowerCase().split('.').pop();
+        var allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+        if ($.inArray(ext, allowed) === -1) {
+          alert('Allowed image types: JPG, PNG, WEBP, GIF');
+          resetAvatarPreview();
+          return;
+        }
+        if (f.size && f.size > 2 * 1024 * 1024) {
+          alert('Image must be 2 MB or smaller');
+          resetAvatarPreview();
+          return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+          if ($previewImg.length) {
+            $previewImg.attr('src', evt.target.result).removeClass('hidden');
+          }
+          if ($avatarText.length) $avatarText.hide();
+        };
+        reader.onerror = function() {
+          alert('Unable to read selected image');
+          resetAvatarPreview();
+        };
+        reader.readAsDataURL(f);
+      });
+
+      if ($removeBtn.length) {
+        $removeBtn.on('click', function(e) {
+          e.preventDefault();
+          resetAvatarPreview();
+        });
+      }
+    }
+
+    // ---------- Max DOB ----------
+    (function() {
+      var d = new Date();
+      var yyyy = d.getFullYear(),
+          mm = String(d.getMonth() + 1).padStart(2, '0'),
+          dd = String(d.getDate()).padStart(2, '0');
+      $('#dateOfBirth').attr('max', yyyy + '-' + mm + '-' + dd);
+    })();
+
+    // ---------- Remote Validation ----------
+    function ajaxPostJson(url, payload) {
+      return $.ajax({
+        url: url,
+        method: 'POST',
+        contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify(payload),
+        dataType: 'json',
+        beforeSend: function(xhr) {
+          if (csrftoken) xhr.setRequestHeader('X-CSRFToken', csrftoken);
+        }
+      });
+    }
+
+    function remoteCheckEmail(email) {
+      if (!checkEmailUrl) return Promise.resolve({ valid: true, message: null });
+      email = (email || '').trim();
+      if (!email) return Promise.resolve({ valid: true, message: null });
+
+      return ajaxPostJson(checkEmailUrl, { email: email })
+        .then(function(resp) {
+          return {
+            valid: !resp.exists,
+            message: resp.exists ? (resp.message || 'Email already exists') : null
+          };
+        }).catch(function() {
+          return { valid: true, message: null };
+        });
+    }
+
+    function remoteCheckEmployeeId(empId) {
+      if (!checkEmployeeIdUrl) return Promise.resolve({ valid: true, message: null });
+      empId = (empId || '').trim();
+      if (!empId) return Promise.resolve({ valid: true, message: null });
+
+      return ajaxPostJson(checkEmployeeIdUrl, { employee_id: empId })
+        .then(function(resp) {
+          return {
+            valid: !resp.exists,
+            message: resp.exists ? (resp.message || 'Employee ID already exists') : null
+          };
+        }).catch(function() {
+          return { valid: true, message: null };
+        });
+    }
+
+    // ---------- Form Submit ----------
+    $form.on('submit', function(e) {
+      e.preventDefault();
+      function validateSelectizeField($select) {
+        var value = $select.val();
+        var $input = $select.next('.selectize-control').find('.selectize-input');
+
+        if (!value) {
+          $select.addClass('is-invalid');
+          $input.addClass('is-invalid');
+          return false;
+        } else {
+          $select.removeClass('is-invalid');
+          $input.removeClass('is-invalid');
+          return true;
+        }
+      }
+        var validPosition = validateSelectizeField($('#position'));
+        var validDepartment = validateSelectizeField($('#department'));
+        // var maritalStatus = validateSelectizeField($('#maritalStatus'));
+        // var country = validateSelectizeField($('#id_country'));
+        // var state = validateSelectizeField($('#id_state'));
+        // var district = validateSelectizeField($('#id_district'));
+        var gender = validateSelectizeField($('#gender'));
+
+$(function() {
+  // Live validation: remove is-invalid on input
+  $('#id_name, #id_address, #id_code').on('input', function () {
+    validateTextField($(this));
+  });
+
+  $('#id_mobile').on('input', function () {
+    validateBalanceField($(this));
+  });
+
+  $('#id_pincode').on('input', function () {
+    validatePincodeField($(this));
+  });
+
+  $('#id_gst').on('input', function () {
+    validateGstField($(this));
+  });
+
+  // Live validation for selectize fields
+  ['#id_country', '#id_state', '#id_district'].forEach(function(selector) {
+    const $select = $(selector);
+    if ($select.length && $select[0].selectize) {
+      $select[0].selectize.on('change', function() {
+        validateSelectizeField($select);
+      });
+    }
+  });
+});
+
+
+
+
+        if (!validPosition || !validDepartment || !gender) {
+          // Early exit or mark form invalid
+          return false;
+        }
+
+
+
+      
+      if (!window.EmployeeFormValidator || typeof window.EmployeeFormValidator.validateAll !== 'function') {
+        console.warn('EmployeeFormValidator not loaded; submitting without client-side input validation.');
+        $form.off('submit');
+        $form.submit();
+        return;
+      }
+
+      var ok = window.EmployeeFormValidator.validateAll();
+      if (!ok) {
+        var $first = $form.find('.is-invalid').first();
+        if ($first.length) {
+          var $panel = $first.closest('.panel-section');
+          if ($panel.length) {
+            $('.panel-section').hide(); $panel.show();
+            $('.tab-btn').removeClass('active');
+            $('#tab-' + $panel.attr('id').replace('panel-', '')).addClass('active');
+          }
+          $('html,body').animate({ scrollTop: ($first.offset().top - 90) }, 200, function() {
+            $first.focus();
+          });
+        }
+        return false;
+      }
+
+      var checks = [];
+      var emailVal = ($email.val() || '').trim();
+      var empVal = ($employeeId.val() || '').trim();
+
+      if (checkEmailUrl && emailVal) {
+        checks.push(remoteCheckEmail(emailVal).then(function(r) { return { field: 'email', res: r }; }));
+      }
+      if (checkEmployeeIdUrl && empVal) {
+        checks.push(remoteCheckEmployeeId(empVal).then(function(r) { return { field: 'employeeId', res: r }; }));
+      }
+
+      if (checks.length === 0) {
+        $form.off('submit');
+        $form.submit();
+        return false;
+      }
+
+      Promise.all(checks).then(function(results) {
+        var blocked = false;
+        results.forEach(function(item) {
+          if (!item.res.valid) {
+            window.EmployeeFormValidator.setError(item.field, item.res.message || 'Already exists');
+            blocked = true;
+          } else {
+            window.EmployeeFormValidator.clearError(item.field);
+          }
+        });
+
+        if (!blocked) {
+          $form.off('submit');
+          $form.submit();
+        } else {
+          var $first = $form.find('.is-invalid').first();
+          if ($first.length) {
+            var $panel = $first.closest('.panel-section');
+            if ($panel.length) {
+              $('.panel-section').hide(); $panel.show();
+              $('.tab-btn').removeClass('active');
+              $('#tab-' + $panel.attr('id').replace('panel-', '')).addClass('active');
+            }
+            $('html,body').animate({ scrollTop: ($first.offset().top - 90) }, 200, function() {
+              $first.focus();
+            });
+          }
+        }
+      }).catch(function(err) {
+        safeLog('Uniqueness check error, submitting anyway', err);
+        $form.off('submit');
+        $form.submit();
+      });
+
+      return false;
+    });
+
+    // ---------- Fix Select2 width on resize ----------
+    $(window).on('resize', function() {
+      $form.find('select[multiple]').each(function() {
+        var $s = $(this);
+        var $c = $s.next('.select2-container');
+        if ($c.length) $c.css('width', '100%');
+      });
+    });
+
+  }); // domready
+})(jQuery);
+</script>
+<script>
+(function(window, $){
+  if (!$) throw new Error('jQuery is required for EmployeeFormValidator');
+
+  var EmployeeFormValidator = (function(){
+
+    var cfg = {
+      formSelector: '#employeeForm',
+      invalidClass: 'is-invalid',
+      errorNodeClass: 'validate-error',
+      serverFieldErrorSelector: '.field-error' // server-rendered nodes
+    };
+    var $form = null;
+    var touched = {};         // track which fields user has interacted with
+    var formSubmitted = false;
+
+    function ensureInlineErrorNode($control, name){
+      name = name || ($control && ($control.attr('name') || $control.attr('id')));
+      if (!name) return $('<small>');
+
+      // prefer server-rendered node
+      var $server = $form.find(cfg.serverFieldErrorSelector + '[data-error-for="'+name+'"]').first();
+      if ($server.length) {
+        $server.addClass(cfg.errorNodeClass).css({display:'block'}).attr('role','alert').attr('aria-live','polite');
+        if (!$server.attr('id')) $server.attr('id','err-'+name);
+        return $server;
+      }
+
+      // select2 case: attach after select2 container
+      if ($control && $control.hasClass('select2-hidden-accessible')) {
+        var id = $control.attr('id');
+        var $sel2 = id ? $('#'+id).next('.select2') : $control.next('.select2');
+        if ($sel2.length) {
+          var $node = $sel2.next('small.'+cfg.errorNodeClass+'[data-for="'+name+'"]');
+          if (!$node.length) {
+            $node = $('<small class="'+cfg.errorNodeClass+' text-danger d-block" data-for="'+name+'"></small>');
+            $sel2.after($node);
+          }
+          $node.css({display:'block'}).attr('role','alert').attr('aria-live','polite');
+          if (!$node.attr('id')) $node.attr('id','err-'+name);
+          return $node;
+        }
+      }
+
+      var $fg = $control ? $control.closest('.form-group') : $();
+      if ($fg.length) {
+        var $node = $fg.find('small.'+cfg.errorNodeClass+'[data-for="'+name+'"]');
+        if (!$node.length) {
+          $node = $('<small class="'+cfg.errorNodeClass+' text-danger d-block" data-for="'+name+'"></small>');
+          $fg.append($node);
+        }
+        $node.css({display:'block'}).attr('role','alert').attr('aria-live','polite');
+        if (!$node.attr('id')) $node.attr('id','err-'+name);
+        return $node;
+      }
+
+      var $node = $control && $control.length ? $control.next('small.'+cfg.errorNodeClass+'[data-for="'+name+'"]') : $();
+      if (!$node.length) {
+        $node = $('<small class="'+cfg.errorNodeClass+' text-danger d-block" data-for="'+name+'"></small>');
+        if ($control && $control.length) $control.after($node); else $form.append($node);
+      }
+      $node.css({display:'block'}).attr('role','alert').attr('aria-live','polite');
+      if (!$node.attr('id')) $node.attr('id','err-'+name);
+      return $node;
+    }
+function setError(name, msg){
+  if (!name) return;
+  var $ctrl = $form.find('[name="'+name+'"], #'+name).first();
+  // console.log('Set error for field:', name, msg);
+
+  var $err = $form.find(cfg.serverFieldErrorSelector + '[data-error-for="'+name+'"]').first();
+  if (!$err.length) $err = ensureInlineErrorNode($ctrl, name);
+
+  try {
+    $err.text(msg || '').removeClass('d-none').css({display:'block', visibility:'visible'});
+  } catch(e) { console.warn('Failed to set inline error text node', e); }
+
+  if ($ctrl.length) {
+    // 1. Apply invalid state to the original control (usually hidden)
+    $ctrl.addClass(cfg.invalidClass).attr('aria-invalid','true');
+    try { $ctrl.attr('aria-describedby', $err.attr('id')); } catch(e){}
+
+    // 2. ---- Select2 (v4) handling ----
+    if ($ctrl.hasClass('select2-hidden-accessible')) {
+      var id = $ctrl.attr('id');
+      var $sel2 = id ? $('#'+id).next('.select2') : $ctrl.next('.select2');
+      if ($sel2.length) {
+        $sel2.find('.select2-selection').addClass(cfg.invalidClass).attr('aria-invalid','true').attr('aria-describedby', $err.attr('id'));
+      }
+    }
+
+    // 3. 🛠️ FIX: Selectize handling 🛠️
+    // Selectize usually creates .selectize-control next to the original input/select.
+    var id = $ctrl.attr('id');
+    var $selz = $ctrl.next('.selectize-control');
+    if (!$selz.length && id) {
+      // Sometimes selectize is inserted elsewhere, find the control wrapper via the ID pattern
+      $selz = $('#' + id + '_selectized').closest('.selectize-control');
+    }
+    
+    if ($selz.length) {
+      // Apply invalid class to the visible Selectize input wrapper
+      $selz.find('.selectize-input')
+           .addClass(cfg.invalidClass)
+           .attr('aria-invalid','true')
+           .attr('aria-describedby', $err.attr('id'));
+    }
+  }
+}
+
+function clearError(name){
+  if (!name) return;
+
+  // find original control (by name or id)
+  var $ctrl = $form.find('[name="'+name+'"], #'+name).first();
+
+  // find server error node(s)
+  var $err = $form.find(cfg.serverFieldErrorSelector + '[data-error-for="'+name+'"], small.'+cfg.errorNodeClass+'[data-for="'+name+'"]');
+  if ($err.length) {
+    $err.text('').hide().css({visibility:'hidden', display:'none'});
+  }
+
+  if ($ctrl.length) {
+    // remove invalid state from the original control
+    $ctrl.removeClass(cfg.invalidClass)
+         .removeAttr('aria-invalid')
+         .removeAttr('aria-describedby');
+
+    // ---- Select2 (v4) handling ----
+    // Select2 creates a sibling .select2 container.
+    var id = $ctrl.attr('id');
+    var $sel2 = id ? $('#'+id).next('.select2') : $ctrl.next('.select2');
+    if ($sel2.length) {
+      // clear classes & ARIA from the selection element(s)
+      $sel2.find('.select2-selection, .select2-selection__rendered')
+           .removeClass(cfg.invalidClass)
+           .removeAttr('aria-invalid')
+           .removeAttr('aria-describedby');
+
+      // also remove aria-describedby on the Select2 container itself
+      $sel2.removeAttr('aria-invalid').removeAttr('aria-describedby');
+
+      // if Select2 added an aria for the original element, ensure it's removed
+      $ctrl.removeAttr('aria-describedby');
+    }
+
+    // ---- Selectize handling ----
+    // Selectize usually creates .selectize-control next to the original input/select.
+    var $selz = $ctrl.next('.selectize-control');
+    if (!$selz.length && id) {
+      // sometimes selectize is inserted elsewhere; try by id
+      $selz = $('#' + id + '_selectized'); // optional fallback
+    }
+    if ($selz.length) {
+      $selz.find('.selectize-input')
+           .removeClass(cfg.invalidClass)
+           .removeAttr('aria-invalid')
+           .removeAttr('aria-describedby');
+      $selz.removeAttr('aria-invalid').removeAttr('aria-describedby');
+      $ctrl.removeAttr('aria-describedby');
+    }
+
+    // ---- Generic: if control has 'select2-hidden-accessible' class (older approach) ----
+    if ($ctrl.hasClass('select2-hidden-accessible')) {
+      // best-effort fallback for other Select2 setups
+      var $fallbackSel2 = $ctrl.next('.select2');
+      $fallbackSel2.find('.select2-selection').removeClass(cfg.invalidClass).removeAttr('aria-invalid').removeAttr('aria-describedby');
+    }
+  }
+}
+
+    
+
+    function resetErrors(){
+      $form.find(cfg.serverFieldErrorSelector + '[data-error-for]').each(function(){ $(this).text('').css({display:'none', visibility:'hidden'}); });
+      $form.find('small.'+cfg.errorNodeClass+'[data-for]').each(function(){ $(this).text('').css({display:'none', visibility:'hidden'}); });
+      $form.find('input,select,textarea').removeClass(cfg.invalidClass).removeAttr('aria-invalid').removeAttr('aria-describedby');
+      $form.find('.select2-selection.'+cfg.invalidClass).removeClass(cfg.invalidClass).removeAttr('aria-invalid').removeAttr('aria-describedby');
+    }
+
+    // validation rules
+    var rules = {
+      name: function($el){
+          var v = ($el.val() || '').trim();
+          if(!v) return 'Please enter full name';
+          if(v.length > 200) return 'Name must be ≤ 200 chars';
+
+          // ✅ allow only letters (A–Z, a–z) and spaces
+          if(!/^[A-Za-z\s]+$/.test(v)) return 'Name must contain only letters and spaces';
+
+          return null;
+      },
+        emgPhone: function($el) {
+    var v = ($el.val() || '').trim();
+    if (!v) return null;
+    var c = v.replace(/[\s\-()+]/g, ''); // Remove non-digits (spaces, dashes, etc.)
+    if (!/^\d{10}$/.test(c)) return 'Emergency phone number must be 10 digits';  // Ensure it's exactly 10 digits
+    return null;
+  },
+      aadhaarNumber: function($el) {
+    var v = ($el.val() || '').trim();  // Get the value of the field
+
+    if (!v) return null;
+    var cleanedValue = v.replace(/\D/g, '');
+
+    if (!/^\d{12}$/.test(cleanedValue)) {
+      return 'Aadhaar number must be exactly 12 digits';
+    }
+
+    return null;  // Return null if validation is successful
+  },
+      email: function($el){ var v=($el.val()||'').trim(); 
+      // if(!v) return 'Please enter email'; 
+      if (v){
+      var re=/^[^\s@]+@[^\s@]+\.[^\s@]+$/; if(!re.test(v)) return 'Enter a valid email'; return null;
+      }
+     },
+      mobile: function($el){ var v=($el.val()||'').trim(); if(!v) return 'Please enter mobile'; var c=v.replace(/[\s\-()+]/g,''); if(!/^\d{10}$/.test(c)) return 'Mobile number must be 10 digits'; return null; },
+workEmail: function($el) {
+  var v = ($el.val() || '').trim();
+  if (!v) return null; // ✅ Allow empty
+  var re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!re.test(v)) return 'Enter a valid work email';
+  return null;
+},
+workMobile: function($el) {
+  var v = ($el.val() || '').trim();
+  if (!v) return null; // ✅ Allow empty
+  var c = v.replace(/[\s\-()+]/g, '');
+  if (!/^\d{10}$/.test(c)) return 'Work mobile number must be 10 digits';
+  return null;
+},
+workPhone: function($el) {
+  var v = ($el.val() || '').trim();
+  if (!v) return null; // ✅ Allow empty
+  var c = v.replace(/[\s\-()+]/g, '');
+  if (!/^\d{10}$/.test(c)) return 'Work phone number must be 10 digits';
+  return null;
+},
+      employeeId: function($el){ var v=($el.val()||'').trim(); if(!v) return 'Please enter employee ID'; return null; },
+      // workLocation: function($el){ var v=($el.val()||'').trim(); if(!v) return 'Please enter work location'; return null; },
+      address: function($el) {
+        var v = ($el.val() || '').trim();
+        // if (!v) return 'Please enter address';
+
+        // Optional: limit max length
+        if (v.length > 0) {
+          if (v.length > 200) return 'Address must be 200 characters or less';
+
+          // Optional: avoid addresses with only numbers or symbols
+          if (!/[a-zA-Z]/.test(v)) return 'Address must contain letters';
+        }
+
+
+        return null;
+      },
+        city: function($el) {
+        var v = ($el.val() || '').trim();
+
+        // if (!v) return 'Please enter city';
+        if (v.length > 100) return 'City must be ≤ 100 chars';
+
+        // Reject if value contains only digits
+        if (/^\d+$/.test(v)) return 'City name cannot be numbers only';
+
+        // Optionally reject invalid characters (only letters, numbers, spaces, hyphens, etc.)
+        // if (!/^[a-zA-Z0-9\s\-]+$/.test(v)) return 'City contains invalid characters';
+
+        return null;
+      },     
+      pinCode: function($el){ var v=($el.val()||'').trim(); var c = (v||'').replace(/\s+/g,'');
+      //  if(!c) return 'Please enter pin code'; 
+      if (c.length >0){
+       if(!/^\d{6}$/.test(c)) return 'Pin code must be 6 digits'; return null; 
+
+      }
+      },
+      dateOfBirth: function($el){ var v=($el.val()||'').trim();
+      //  if(!v) return 'Please enter date of birth'; 
+      if (v){
+       if(!/^\d{4}-\d{2}-\d{2}$/.test(v)) return 'Use YYYY-MM-DD'; return null; 
+
+      }
+      },
+      maritalStatus: function($el){
+        var selectize = $el[0] && $el[0].selectize;
+        var v = selectize ? (String(selectize.getValue()||'').trim()) : String($el.val()||'').trim();
+        // if (!v) return 'Please select marital status';
+        return null;
+      },
+      position: function($el){
+        var selectize = $el[0] && $el[0].selectize;
+        var v = selectize ? (String(selectize.getValue()||'').trim()) : String($el.val()||'').trim();
+        if (!v) return 'Please select position';
+        return null;
+      },
+      department: function($el){
+        var selectize = $el[0] && $el[0].selectize;
+        var v = selectize ? (String(selectize.getValue()||'').trim()) : String($el.val()||'').trim();
+        if (!v) return 'Please select department';
+        return null;
+      },
+      // district : function($el){
+      //   var selectize = $el[0] && $el[0].selectize;
+      //   var v = selectize ? (String(selectize.getValue()||'').trim()) : String($el.val()||'').trim();
+      //   if (!v) return 'Please select district';
+      //   return null;
+      // },
+      gender: function($el){
+        var selectize = $el[0] && $el[0].selectize;
+        var v = selectize ? (String(selectize.getValue()||'').trim()) : String($el.val()||'').trim();
+        if (!v) return 'Please select gender';
+        return null;
+      },
+
+      // === NEW: Type field validation (name="type", id="employee_type") ===
+      // ensures value exists and is one of allowed values
+      type: function($el){
+        var selectize = $el[0] && $el[0].selectize;
+        var v = selectize ? (String(selectize.getValue()||'').trim()) : String($el.val()||'').trim();
+        if (!v) return 'Please select Type';
+        if (['limited','admin'].indexOf(v) === -1) return 'Invalid type selected';
+        return null;
+      },
+
+      role: function($el){
+        var selectize = $el[0] && $el[0].selectize;
+        var v = selectize ? (String(selectize.getValue()||'').trim()) : String($el.val()||'').trim();
+        if (!v) return 'Please select role';
+        return null;
+      },
+      joiningDate: function($el){ var v=($el.val()||'').trim(); if(!v) return 'Please enter joining date'; if(!/^\d{4}-\d{2}-\d{2}$/.test(v)) return 'Use YYYY-MM-DD'; return null; },
+      password: function($el) {
+        var v = ($el.val() || '').trim();
+        if (!v) return 'Please enter password';
+        if (v.length < 6) return 'Password must be at least 6 characters';
+
+        // Must contain at least one letter and one number
+        if (!/[a-zA-Z]/.test(v) || !/[0-9]/.test(v)) {
+          return 'Password must contain letters and numbers';
+        }
+
+        return null;
+      },
+confirmPassword: function($el) {
+  var v = ($el.val() || '').trim();
+  if (!v) return 'Please confirm password';
+  var v2 = ($form.find('[name="password"]').val() || '').trim();
+  if (v !== v2) return 'Passwords do not match';
+  return null;
+},
+      username: function($el) {
+        var v = ($el.val() || '').trim();
+        if (!v) return 'Please enter username';
+        return null;
+      },
+
+      // basicSalary: function($el){ var v=($el.val()||'').trim(); if(!v) return 'Please enter basic salary'; if(isNaN(Number(v)) || Number(v) < 0) return 'Enter a valid basic salary'; return null; },
+      // da: function($el){ var v=($el.val()||'').trim(); if(!v) return 'Please enter DA'; if(isNaN(Number(v)) || Number(v) < 0) return 'Enter a valid DA'; return null; },
+      // hra: function($el){ var v=($el.val()||'').trim(); if(!v) return 'Please enter HRA'; if(isNaN(Number(v)) || Number(v) < 0) return 'Enter a valid HRA'; return null; }
+    };
+
+    function validateField(name){
+      if (!name) return true;
+      var $ctrl = $form.find('[name="'+name+'"], #'+name).first();
+      if (!$ctrl.length) return true; // no such field
+
+      var ruleFn = rules[name];
+      if (!ruleFn) return true; // no validation rule
+
+      var errMsg = ruleFn($ctrl);
+
+      if (errMsg){
+        setError(name, errMsg);
+        return false;
+      }
+      clearError(name);
+      return true;
+    }
+
+    function validateAll(){
+      var valid = true;
+      // validate in DOM order for more natural "first invalid"
+      var names = Object.keys(rules);
+      for (var i = 0; i < names.length; i++){
+        var name = names[i];
+        var ok = validateField(name);
+        if (!ok) valid = false;
+      }
+      return valid;
+    }
+
+    function markTouched(name){
+      touched[name] = true;
+    }
+
+    // Find the first invalid control in visual / DOM order (prioritizes inputs/selects with .is-invalid)
+    function findFirstInvalidField(){
+      // 1) explicit invalid controls (set by validator)
+      var $invalid = $form.find('input.'+cfg.invalidClass+':visible, select.'+cfg.invalidClass+':visible, textarea.'+cfg.invalidClass+':visible').first();
+      if ($invalid && $invalid.length) return $invalid;
+
+      // 2) server-rendered field-error nodes with text, map to control
+      var $serverErr = $form.find(cfg.serverFieldErrorSelector + '[data-error-for]').filter(function(){
+        return $(this).text().trim().length > 0;
+      }).first();
+      if ($serverErr && $serverErr.length) {
+        var nm = $serverErr.attr('data-error-for');
+        if (nm) {
+          var $c = $form.find('[name="'+nm+'"], #'+nm).first();
+          if ($c && $c.length) return $c;
+        }
+      }
+
+      // 3) inline validator-created small nodes with text
+      var $inlineErr = $form.find('small.'+cfg.errorNodeClass+'[data-for]').filter(function(){ return $(this).text().trim().length > 0; }).first();
+      if ($inlineErr && $inlineErr.length) {
+        var forName = $inlineErr.attr('data-for');
+        if (forName) {
+          var $c2 = $form.find('[name="'+forName+'"], #'+forName).first();
+          if ($c2 && $c2.length) return $c2;
+        }
+      }
+
+      // 4) find any control whose nearest .field-error sibling has text (fallback)
+      var $any = $form.find('input,select,textarea').filter(function(){
+        var nm = $(this).attr('name') || $(this).attr('id');
+        if (!nm) return false;
+        var $f = $form.find(cfg.serverFieldErrorSelector + '[data-error-for="'+nm+'"]');
+        return $f.length && $f.text().trim().length > 0;
+      }).first();
+      if ($any && $any.length) return $any;
+
+      return null;
+    }
+
+    // Activate the tab/panel that contains the provided control element
+    function activatePanelContaining($element){
+      try {
+        if (!$element || !$element.length) return;
+        // closest panel-section
+        var $panel = $element.closest('.panel-section');
+        var panelId = $panel.length ? $panel.attr('id') : null;
+
+        if (!panelId) {
+          // fallback: any ancestor with id starting with panel-
+          var $anc = $element.parents().filter(function(){ return (this.id && this.id.indexOf('panel-') === 0); }).first();
+          panelId = $anc.length ? $anc.attr('id') : null;
+        }
+
+        if (!panelId) {
+          // nothing to activate
+          return;
+        }
+
+        // hide all panels and deactivate tabs
+        $('.panel-section').each(function(){
+          var $p = $(this);
+          if ($p.attr('id') === panelId) {
+            $p.show().attr('aria-hidden','false');
+          } else {
+            $p.hide().attr('aria-hidden','true');
+          }
+        });
+
+        // update tab buttons
+        $('.tab-btn').each(function(){
+          var $b = $(this);
+          if ($b.attr('aria-controls') === panelId) {
+            $b.addClass('active').attr('aria-selected','true').attr('tabindex','0').focus();
+          } else {
+            $b.removeClass('active').attr('aria-selected','false').attr('tabindex','-1');
+          }
+        });
+
+        // small delay -> scroll into view + focus first invalid inside the panel
+        setTimeout(function(){
+          try {
+            var $firstVisibleInvalid = $panel.find('input.'+cfg.invalidClass+':visible, select.'+cfg.invalidClass+':visible, textarea.'+cfg.invalidClass+':visible').first();
+            var $target = $firstVisibleInvalid && $firstVisibleInvalid.length ? $firstVisibleInvalid : $panel.find('input,select,textarea:visible').first();
+            if ($target && $target.length) {
+              var top = $target.offset().top - 80;
+              if (typeof top === 'number' && !isNaN(top)) $('html, body').animate({ scrollTop: top }, 220);
+              try { $target.focus(); } catch(e){}
+            } else {
+              // fallback scroll to panel
+              var ptop = $panel.offset().top - 80;
+              if (typeof ptop === 'number' && !isNaN(ptop)) $('html, body').animate({ scrollTop: ptop }, 220);
+            }
+          } catch(e){ console.warn(e); }
+        }, 120);
+
+      } catch(e){ console.warn('activatePanelContaining error', e); }
+    }
+
+    function init(){
+      $form = $(cfg.formSelector);
+      if (!$form.length) {
+        console.warn('Form not found:', cfg.formSelector);
+        return;
+      }
+
+      $form.on('input change', 'input,select,textarea', function(e){
+        var $t = $(this);
+        var name = $t.attr('name') || $t.attr('id');
+        if (!name) return;
+        markTouched(name);
+        if (touched[name]){
+          validateField(name);
+        }
+      });
+
+      $form.on('submit', function(e){
+        formSubmitted = true;
+        // run validators and set errors
+        var ok = validateAll();
+
+        if (!ok){
+          e.preventDefault();
+          e.stopImmediatePropagation();
+
+          // find first invalid and open its panel/tab
+          var $firstInvalid = findFirstInvalidField();
+          if ($firstInvalid && $firstInvalid.length) {
+            activatePanelContaining($firstInvalid);
+            // optional visual highlight
+            try {
+              $firstInvalid.addClass('field-highlight');
+              setTimeout(function(){ $firstInvalid.removeClass('field-highlight'); }, 900);
+            } catch(e){}
+          } else {
+            // If we couldn't locate a control, try to open first panel that has any .field-error text
+            var $anyErr = $form.find(cfg.serverFieldErrorSelector + '[data-error-for]').filter(function(){ return $(this).text().trim().length > 0; }).first();
+            if ($anyErr && $anyErr.length) {
+              var nm = $anyErr.attr('data-error-for');
+              var $ctrl = $form.find('[name="'+nm+'"], #'+nm).first();
+              if ($ctrl && $ctrl.length) activatePanelContaining($ctrl);
+            }
+          }
+
+          return false;
+        }
+        // else allow submit
+      });
+    }
+
+    return {
+      init: init,
+      validateField: validateField,
+      validateAll: validateAll,
+      resetErrors: resetErrors,
+      setError: setError,
+      clearError: clearError
+    };
+  })();
+
+  window.EmployeeFormValidator = EmployeeFormValidator;
+
+  $(document).ready(function(){
+    EmployeeFormValidator.init();
+
+    // Optional: make tab buttons work if no other tab script exists
+    // If you already have a tab script, this block will harmlessly set ARIA attrs and basic click behavior.
+    (function setupTabsFallback(){
+      var $tabBtns = $('.tab-btn');
+      var $panels  = $('.panel-section');
+
+      if (!$tabBtns.length || !$panels.length) return;
+
+      // initial ARIA
+      $tabBtns.each(function(){
+        var $b = $(this);
+        $b.attr('role', 'tab');
+        if ($b.hasClass('active')) { $b.attr('aria-selected','true').attr('tabindex','0'); }
+        else { $b.attr('aria-selected','false').attr('tabindex','-1'); }
+      });
+      $panels.each(function(){
+        var $p = $(this);
+        $p.attr('role', 'tabpanel');
+        if ($p.is(':visible')) $p.attr('aria-hidden','false'); else $p.attr('aria-hidden','true').hide();
+      });
+
+      $tabBtns.off('click.tabFallback').on('click.tabFallback', function(e){
+        e.preventDefault();
+        var $btn = $(this);
+        var panelId = $btn.attr('aria-controls') || $btn.data('controls');
+        if (!panelId) return;
+        // deactivate others
+        $tabBtns.removeClass('active').attr('aria-selected','false').attr('tabindex','-1');
+        $btn.addClass('active').attr('aria-selected','true').attr('tabindex','0').focus();
+        $panels.each(function(){
+          var $p = $(this);
+          if ($p.attr('id') === panelId) { $p.show().attr('aria-hidden','false'); } else { $p.hide().attr('aria-hidden','true'); }
+        });
+      });
+
+      // keyboard: left/right/home/end activate and focus
+      $tabBtns.on('keydown.tabFallback', function(e){
+        var key = e.which || e.keyCode;
+        var idx = $tabBtns.index(this);
+        if (key === 37 || key === 38) { // left / up
+          e.preventDefault();
+          var prev = (idx <= 0) ? $tabBtns.length - 1 : idx - 1;
+          $tabBtns.eq(prev).trigger('click');
+        } else if (key === 39 || key === 40) { // right / down
+          e.preventDefault();
+          var next = (idx >= $tabBtns.length - 1) ? 0 : idx + 1;
+          $tabBtns.eq(next).trigger('click');
+        } else if (key === 36) { // Home
+          e.preventDefault();
+          $tabBtns.first().trigger('click');
+        } else if (key === 35) { // End
+          e.preventDefault();
+          $tabBtns.last().trigger('click');
+        } else if (key === 13 || key === 32) { // Enter or Space
+          e.preventDefault();
+          $(this).trigger('click');
+        }
+      });
+    })();
+
+  });
+
+})(window, window.jQuery);
+</script>
+
+
+
+
+  
+<script>
+
+$('#maritalStatus').selectize({
+  // create: true,
+  placeholder: 'Select Marital Status',
+  allowEmptyOption: true,
+  plugins: ['clear_button'],
+  // sortField: 'text',
+});
+$('#manager').selectize({
+  placeholder: 'Select Manager',
+  allowEmptyOption: true,
+  plugins: ['clear_button'],
+  // sortField: 'text',       // or 'custom' if you want to preserve order
+  searchField: ['text']    // enables search
+});
+$('#gender').selectize({
+  placeholder: 'Select gender',
+  allowEmptyOption: true,
+  plugins: ['clear_button'],
+  // sortField: 'text',         // Optional: alphabetical sorting
+  searchField: ['text']      // Enables search by branch name
+});
+  var selectize = $('#position').selectize({
+    placeholder: 'Select Position',
+    allowEmptyOption: true,
+    plugins: ['clear_button'],
+    searchField: ['text'],
+  });
+$('#branch').selectize({
+  placeholder: 'Select Branch',
+  allowEmptyOption: true,
+  plugins: ['clear_button'],
+  // sortField: 'text',         // Optional: alphabetical sorting
+  searchField: ['text']      // Enables search by branch name
+});
+  var selectize = $('#position').selectize({
+    placeholder: 'Select Position',
+    allowEmptyOption: true,
+    plugins: ['clear_button'],
+    searchField: ['text'],
+  });
+
+  $('#department').selectize({
+    placeholder: 'Select Department',
+    allowEmptyOption: true,
+    plugins: ['clear_button'],
+    searchField: ['text']
+  });
+  // initialize selectize for employee type
+$('#employee_type').selectize({
+  placeholder: 'Select Type',
+  allowEmptyOption: true,
+  plugins: ['clear_button'],
+  searchField: ['text'],
+  onChange: function(value) {
+    // keep server-side validation visuals in sync
+    var $s = $('#employee_type');
+    if (value) $s.removeClass('is-invalid'); 
+    $s.trigger('change');
+  }
+});
+
+   $('#allowed_branches').selectize({
+  plugins: ['remove_button'],
+  placeholder: 'Select allowed branches',
+  allowEmptyOption: true,
+ 
+  searchField: ['text'],
+});
+  var $lcoSelect = $('#id_lco');
+
+  if ($lcoSelect.length) {
+    $lcoSelect.selectize({
+      create: false,
+      sortField: 'text',
+      placeholder: 'Select LCO',
+      dropdownParent: 'body',
+      plugins: ['clear_button']
+    });
+  }
+$(document).ready(function() {
+
+    // 1. Initialize District Selectize (Must be initialized first as it's referenced by State/Country)
+    var $district = $('#id_district').selectize({
+        options: [],
+        valueField: 'value',
+        labelField: 'name',
+        searchField: 'name',
+        placeholder: 'Select District',
+        sortField: 'name',
+        allowEmptyOption: true,
+        plugins: ['clear_button'],
+        disabled: true
+    });
+    var districtSelectize = $district[0].selectize;
+
+    // 2. Load Static Data and Initialize Country/State
+    // Load countries, states, and cities data
+    $.getJSON("{% static 'data/countries+states+cities.json' %}", function(countries) {
+        var countryOptions = countries.map(function(country) {
+            return {
+                value: country.name,
+                text: country.name,
+                states: country.states
+            };
+        });
+
+        // Initialize State Selectize
+        var $selectState = $('#id_state').selectize({
+            valueField: 'value',
+            labelField: 'text',
+            searchField: 'text',
+            placeholder: "Select State",
+            allowEmptyOption: true,
+            sortField: 'text',
+            plugins: ['clear_button'],
+            disabled: true,
+            
+            // ✅ FIX: State Change Handler (Triggers District Load)
+            onChange: function(value) {
+                // Clear district selection when state changes
+                districtSelectize.clear();
+                districtSelectize.clearOptions();
+
+                if (value) {
+                    districtSelectize.enable();
+                    // Load districts immediately when a state is selected
+                    loadDistrictsFromAPI(value); 
+                } else {
+                    districtSelectize.disable();
+                }
+            }
+        });
+        var selectizeState = $selectState[0].selectize;
+
+        // Initialize Country Selectize
+        var $selectCountry = $('#id_country').selectize({
+            options: countryOptions,
+            valueField: 'value',
+            labelField: 'text',
+            searchField: 'text',
+            placeholder: "Select Country",
+            allowEmptyOption: true,
+            sortField: 'text',
+            plugins: ['clear_button'],
+            onChange: function(value) {
+                // Always clear state and district selections first
+                selectizeState.clear();
+                selectizeState.clearOptions();
+                selectizeState.disable();
+
+                districtSelectize.clear();
+                districtSelectize.clearOptions();
+                districtSelectize.disable();
+
+                if (!value) {
+                    return;
+                }
+
+                var selectedCountry = countryOptions.find(function(country) {
+                    return country.value === value;
+                });
+
+                if (selectedCountry && selectedCountry.states) {
+                    // Enable and populate state select
+                    selectizeState.enable();
+
+                    var stateOptions = selectedCountry.states.map(function(state) {
+                        return { value: state.name, text: state.name };
+                    });
+                    
+                    selectizeState.addOption(stateOptions);
+                    selectizeState.refreshOptions(false);
+
+                    // Set default state only if country is India and Kerala exists
+                    if (value === 'India') {
+                        var keralaExists = selectedCountry.states.some(function(state) {
+                            return state.name === 'Kerala';
+                        });
+                        if (keralaExists) {
+                            selectizeState.setValue('Kerala');
+                            // NOTE: The state's onChange handler above will now trigger the district load.
+                        }
+                    }
+                }
+            }
+        });
+
+        var selectizeCountry = $selectCountry[0].selectize;
+
+        // Set default selected country to India
+        selectizeCountry.setValue('India');
+        
+        // Trigger district loading once on page load for the initial state (e.g., Kerala)
+        const initialSelectedState = selectizeState.getValue();
+        if (initialSelectedState) {
+            loadDistrictsFromAPI(initialSelectedState);
+        }
+    });
+
+
+    // 3. District Loading Function
+    function loadDistrictsFromAPI(stateName) {
+        if (!stateName) {
+            districtSelectize.clear();
+            districtSelectize.clearOptions();
+            districtSelectize.disable();
+            return;
+        }
+
+        $.ajax({
+            url: "/static/data/districts.json",
+            method: "GET",
+            dataType: "json"
+        })
+        .done(function(res) {
+            if (Array.isArray(res)) {
+                const filtered = res.filter(function(d) {
+                    return d.state_name.trim().toLowerCase() === stateName.trim().toLowerCase();
+                });
+
+                const options = filtered.map(function(d) {
+                    return {
+                        value: d.name,
+                        name: d.name
+                    };
+                });
+
+                districtSelectize.clear();
+                districtSelectize.clearOptions();
+                districtSelectize.addOption(options);
+                districtSelectize.enable();
+                districtSelectize.refreshOptions(false);
+
+                // Set selected value if available (for editing/pre-filled forms)
+                const selectedDistrict = $('#id_district').data('selected');
+                if (selectedDistrict) {
+                    districtSelectize.setValue(selectedDistrict, true);
+                }
+
+            } else {
+                districtSelectize.clear();
+                districtSelectize.clearOptions();
+                districtSelectize.disable();
+            }
+        })
+        .fail(function(err) {
+            console.error("Failed to fetch districts:", err);
+            districtSelectize.clear();
+            districtSelectize.clearOptions();
+            districtSelectize.disable();
+        });
+    }
+
+    // 4. Removed Logic
+    // The previous complex logic involving setTimeout, getStateSelectize, and the 
+    // .on('change') bindings has been removed as it was causing the timing issue.
+    // The single, direct 'onChange' binding on $selectState now handles all state changes.
+});
+</script>
+
+<script>
+(function () {
+    // Helper: get selectize instance for a clicked control element
+    function getInstanceFromControl(controlEl) {
+        if (!controlEl) return null;
+
+        // 1) Common pattern: input id = "<original-select-id>-selectized"
+        var input = controlEl.querySelector('input[id$="-selectized"], input[id$="_selectized"]');
+        if (input && input.id) {
+            var origId = input.id.replace(/-selectized$|_selectized$/, '');
+            var orig = document.getElementById(origId);
+            if (orig && orig.selectize) return orig.selectize;
+        }
+
+        // 2) Fallback: try to find a select whose selectize.$control contains this controlEl
+        var selects = document.querySelectorAll('select');
+        for (var i = 0; i < selects.length; i++) {
+            var s = selects[i];
+            if (s && s.selectize && s.selectize.$control && s.selectize.$control.length) {
+                // jQuery object -> DOM node in [0]
+                if (s.selectize.$control[0] === controlEl || s.selectize.$control[0].contains(controlEl)) {
+                    return s.selectize;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    // Close all other open selectize instances except optionally one to keep open
+    function closeAllExcept(keepInstance) {
+        var selects = document.querySelectorAll('select');
+        for (var i = 0; i < selects.length; i++) {
+            var s = selects[i];
+            if (s && s.selectize) {
+                try {
+                    if (s.selectize.isOpen && s.selectize !== keepInstance) {
+                        s.selectize.close();
+                    }
+                } catch (e) {
+                    // ignore instances that don't expose isOpen/close
+                }
+            }
+        }
+    }
+
+    // Handler runs in capture phase so it executes before Selectize's handlers
+    function pointerDownHandler(e) {
+        // find nearest selectize control or input or dropdown
+        var target = e.target;
+        var control = target.closest && (target.closest('.selectize-control') || target.closest('.selectize-input') || target.closest('.selectize-dropdown'));
+        if (!control) {
+            // If click didn't hit a selectize control, optionally close everything if click is outside
+            var outside = !target.closest || !target.closest('.selectize-control, .selectize-dropdown, .selectize-input');
+            if (outside) {
+                closeAllExcept(null);
+            }
+            return;
+        }
+
+        // Get the instance for this control (the one being clicked)
+        var clickedInst = getInstanceFromControl(control);
+
+        // Immediately close all other open selectize dropdowns
+        closeAllExcept(clickedInst);
+        // Let the event continue — the clicked instance will open after our handler.
+    }
+
+    // Attach capture-phase listeners for mouse and touch (to be early)
+    document.addEventListener('mousedown', pointerDownHandler, true);   // useCapture = true
+    document.addEventListener('touchstart', pointerDownHandler, true);
+    // Also attach keyboard focus (for keyboard-only users)
+    document.addEventListener('focusin', function (e) {
+        var target = e.target;
+        var control = target.closest && (target.closest('.selectize-control') || target.closest('.selectize-input') || target.closest('.selectize-dropdown'));
+        if (control) {
+            var clickedInst = getInstanceFromControl(control);
+            closeAllExcept(clickedInst);
+        }
+    }, true);
+
+})();
+</script>
+
+
+
+
+<!-- <script>
+(function($){
+  $(function(){
+
+    var $input = $('#employee-image-upload');
+    var $img = $('#previewImg');
+    var $text = $('#avatarText');
+    var $remove = $('#removeImageBtn');
+    var $wrap = $('#avatarWrap');
+    var currentObjectURL = null;
+    var MAX_BYTES = 2 * 1024 * 1024; // 2MB
+
+    // Helper: show a simple error (replace with inline UI if you prefer)
+    function showError(msg) {
+      // replace alert with your UI if desired
+      alert(msg);
+    }
+
+    function updateRemoveVisibility() {
+      if ($img.attr('src')) {
+        $remove.prop('disabled', false).show();
+      } else {
+        $remove.prop('disabled', true).hide();
+      }
+    }
+
+    function clearPreview() {
+      // revoke object URL if any
+      if (currentObjectURL) {
+        try { URL.revokeObjectURL(currentObjectURL); } catch(e){}
+        currentObjectURL = null;
+      }
+      // clear img
+      $img.attr('src', '').attr('alt', 'Profile preview').addClass('hidden').hide();
+      // reset input
+      try { $input.val(''); } catch(e){ /* some browsers require workaround */ }
+      // restore text
+      $text.show();
+      updateRemoveVisibility();
+    }
+
+    function showPreviewFromFile(file) {
+      if (!file) return clearPreview();
+
+      // type check
+      if (file.type && file.type.indexOf('image/') !== 0) {
+        showError('Please upload a valid image (PNG/JPG/WEBP).');
+        clearPreview();
+        return;
+      }
+      // size check
+      if (file.size > MAX_BYTES) {
+        showError('Maximum file size is 2 MB.');
+        clearPreview();
+        return;
+      }
+
+      // revoke previous
+      if (currentObjectURL) {
+        try { URL.revokeObjectURL(currentObjectURL); } catch(e){}
+        currentObjectURL = null;
+      }
+
+      // use object URL for fast preview
+      try {
+        currentObjectURL = URL.createObjectURL(file);
+        $img.attr('src', currentObjectURL).attr('alt', file.name || 'Profile preview').removeClass('hidden').show();
+        $text.hide();
+        updateRemoveVisibility();
+      } catch (e) {
+        // fallback to FileReader if createObjectURL fails
+        var fr = new FileReader();
+        fr.onload = function(ev){
+          $img.attr('src', ev.target.result).attr('alt', file.name || 'Profile preview').removeClass('hidden').show();
+          $text.hide();
+          updateRemoveVisibility();
+        };
+        fr.onerror = function(){
+          showError('Unable to read file for preview.');
+          clearPreview();
+        };
+        fr.readAsDataURL(file);
+      }
+    }
+
+    // wire file input change
+    $input.on('change', function(e){
+      var file = (this.files && this.files[0]) ? this.files[0] : null;
+      if (!file) {
+        clearPreview();
+        return;
+      }
+      showPreviewFromFile(file);
+    });
+
+    // wire remove button
+    $remove.on('click', function(e){
+      e.preventDefault();
+      clearPreview();
+    });
+
+    // allow clicking avatar area to open file select (optional)
+    $wrap.on('click', function(){
+      try { $input.trigger('click'); } catch(e){}
+    });
+
+    // init state: if an image src already present (server-provided), show Remove; otherwise hide img+remove
+    $(function init(){
+      if ($img.attr('src') && $img.attr('src').trim() !== '') {
+        $img.removeClass('hidden').show();
+        $text.hide();
+      } else {
+        $img.addClass('hidden').hide();
+        $text.show();
+      }
+      updateRemoveVisibility();
+    })();
+
+  });
+})(jQuery);
+</script> -->
+
+{% endblock %}
